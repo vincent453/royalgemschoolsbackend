@@ -23,7 +23,6 @@ export const uploadResult = async (req, res) => {
       nextTermBegins,
     } = req.body;
 
-    // ── Basic validation ──────────────────────────────────
     if (!studentId || !term || !session)
       return res.status(400).json({ message: "Student ID, term, and session are required" });
 
@@ -39,7 +38,6 @@ export const uploadResult = async (req, res) => {
         message: `Result for ${term} (${session}) already exists for this student. Use the update endpoint instead.`,
       });
 
-    // ── Grade each subject ────────────────────────────────
     let totalScore = 0;
     const gradedSubjects = [];
 
@@ -47,16 +45,11 @@ export const uploadResult = async (req, res) => {
       if (!s.name || s.cwk === undefined || s.hwk === undefined || s.ca1 === undefined || s.ca2 === undefined || s.exam === undefined)
         return res.status(400).json({ message: `Missing score fields for subject: ${s.name || "unknown"}` });
 
-      if (Number(s.cwk)  < 0 || Number(s.cwk)  > 10)
-        return res.status(400).json({ message: `CWK must be 0–10 for ${s.name}` });
-      if (Number(s.hwk)  < 0 || Number(s.hwk)  > 10)
-        return res.status(400).json({ message: `HWK must be 0–10 for ${s.name}` });
-      if (Number(s.ca1) < 0 || Number(s.ca1) > 10)
-        return res.status(400).json({ message: `CA1 must be 0–10 for ${s.name}` });
-      if (Number(s.ca2) < 0 || Number(s.ca2) > 10)
-        return res.status(400).json({ message: `CA2 must be 0–10 for ${s.name}` });
-      if (Number(s.exam) < 0 || Number(s.exam) > 60)
-        return res.status(400).json({ message: `Exam must be 0–60 for ${s.name}` });
+      if (Number(s.cwk)  < 0 || Number(s.cwk)  > 10) return res.status(400).json({ message: `CWK must be 0–10 for ${s.name}` });
+      if (Number(s.hwk)  < 0 || Number(s.hwk)  > 10) return res.status(400).json({ message: `HWK must be 0–10 for ${s.name}` });
+      if (Number(s.ca1) < 0 || Number(s.ca1) > 10)   return res.status(400).json({ message: `CA1 must be 0–10 for ${s.name}` });
+      if (Number(s.ca2) < 0 || Number(s.ca2) > 10)   return res.status(400).json({ message: `CA2 must be 0–10 for ${s.name}` });
+      if (Number(s.exam) < 0 || Number(s.exam) > 60)  return res.status(400).json({ message: `Exam must be 0–60 for ${s.name}` });
 
       const total = Number(s.cwk) + Number(s.hwk) + Number(s.ca1) + Number(s.ca2) + Number(s.exam);
       let grade, remark;
@@ -85,32 +78,29 @@ export const uploadResult = async (req, res) => {
 
     const resultStatus = average >= 40 ? "Pass" : "Fail";
 
-    // ── Persist ───────────────────────────────────────────
     const result = await Result.create({
       student: studentId,
       term,
       session,
       subjects: gradedSubjects,
       totalScore,
-      average:  average.toFixed(2),
-      classAverage: 0, // will be recomputed below
-      gpa:      gpa.toFixed(2),
+      average: average.toFixed(2),
+      classAverage: 0,
+      gpa: gpa.toFixed(2),
       resultStatus,
-      timesSchoolOpened:      timesSchoolOpened      ?? 0,
-      timesPresent:           timesPresent           ?? 0,
-      numberOfStudentsInClass: numberOfStudentsInClass ?? 0,
-      affectiveDispositions:      affectiveDispositions      ?? [],
-      psychomotorDispositions:    psychomotorDispositions    ?? [],
+      timesSchoolOpened:       timesSchoolOpened       ?? 0,
+      timesPresent:            timesPresent            ?? 0,
+      numberOfStudentsInClass: numberOfStudentsInClass  ?? 0,
+      affectiveDispositions:       affectiveDispositions       ?? [],
+      psychomotorDispositions:     psychomotorDispositions     ?? [],
       inclusiveLearningActivities: inclusiveLearningActivities ?? [],
       teacherRemark,
       headRemark,
       nextTermBegins,
     });
 
-    // ── Recompute classAverage for everyone in the same class/term/session ──
     await recomputeClassAverage(student.classLevel, term, session);
 
-    // Return the result with the freshly computed classAverage
     const updatedResult = await Result.findById(result._id);
     res.status(201).json({ message: "Result uploaded successfully", result: updatedResult });
   } catch (error) {
@@ -190,13 +180,13 @@ export const renderResultCard = async (req, res) => {
         timesPresent:      result.timesPresent,
       },
       summary: {
-        grandTotal:    result.totalScore,
+        grandTotal:   result.totalScore,
         maxMarks,
-        average:       result.average,
-        classAverage:  result.classAverage,
-        gpa:           result.gpa,
+        average:      result.average,
+        classAverage: result.classAverage,
+        gpa:          result.gpa,
         totalInWords,
-        resultStatus:  result.resultStatus,
+        resultStatus: result.resultStatus,
       },
       dispositions: {
         affective:   result.affectiveDispositions,
@@ -204,8 +194,8 @@ export const renderResultCard = async (req, res) => {
         inclusive:   result.inclusiveLearningActivities,
       },
       remarks: {
-        teacher:      result.teacherRemark  || "",
-        headOfSchool: result.headRemark     || "",
+        teacher:      result.teacherRemark || "",
+        headOfSchool: result.headRemark    || "",
       },
       nextTermBegins: result.nextTermBegins || "",
       gradingScale: [
@@ -252,10 +242,11 @@ export const viewAllResults = async (req, res) => {
       subjects:     result.subjects,
     }));
 
+    // NOTE: req.session removed — admin is set by JWT middleware on req.admin
     return res.render("admin/view-results", {
       title:      "View Results",
       admin:      req.admin || null,
-      adminToken: req.session?.adminToken || null,
+      adminToken: null, // token lives on the client, not the server
       results:    formattedResults,
     });
   } catch (error) {
@@ -270,27 +261,16 @@ export const viewAllResults = async (req, res) => {
 // HELPERS
 // ─────────────────────────────────────────────────────────────
 
-/**
- * Recomputes the classAverage for every result in a given
- * classLevel + term + session combination and writes it back.
- */
 async function recomputeClassAverage(classLevel, term, session) {
-  // Find all results for students in this class/term/session
-  const classResults = await Result.find({ term, session })
-    .populate("student", "classLevel");
-
-  // Filter to matching classLevel
+  const classResults = await Result.find({ term, session }).populate("student", "classLevel");
   const matching = classResults.filter(r => r.student?.classLevel === classLevel);
   if (matching.length === 0) return;
 
   const sum = matching.reduce((acc, r) => acc + Number(r.average), 0);
   const classAvg = (sum / matching.length).toFixed(2);
 
-  // Bulk-update all matching results
   await Promise.all(
-    matching.map(r =>
-      Result.findByIdAndUpdate(r._id, { classAverage: classAvg })
-    )
+    matching.map(r => Result.findByIdAndUpdate(r._id, { classAverage: classAvg }))
   );
 }
 
