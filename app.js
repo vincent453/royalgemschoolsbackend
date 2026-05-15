@@ -9,7 +9,7 @@ import cors from "cors";
 import morgan from "morgan";
 
 // Import API routes
-import adminViewRoutes from "../backend/routes/adminViewRoute.js";
+import adminViewRoutes from "./routes/adminViewRoute.js";
 import userRoutes from "./routes/userRoutes.js";
 import connectDB from "./config/db.js";
 import studentRoutes from "./routes/studentRoutes.js";
