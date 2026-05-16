@@ -1,5 +1,5 @@
     import express from "express";
-    import { requireAdminAuth, redirectIfLoggedIn } from "../middleware/renderMiddleware.js";
+    import { requireAdminAuth } from "../middleware/renderMiddleware.js";
     // import { upload, uploadToCloudinary } from '../config/cloudinary.js';
     import Admin from "../models/adminModel.js";
     // import Student from "../models/studentModel.js";
@@ -14,13 +14,6 @@
     // ADMIN LOGIN & LOGOUT (No Auth Required)
     // ==========================================
 
-    // Show login page
-    router.get("/login", redirectIfLoggedIn, (req, res) => {
-    res.render("admin/login", { 
-        error: null,
-        title: "Admin Login"
-    });
-    });
 
    router.post("/login", async (req, res) => {
   try {
