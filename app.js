@@ -14,6 +14,8 @@ import userRoutes from "./routes/userRoutes.js";
 import connectDB from "./config/db.js";
 import studentRoutes from "./routes/studentRoutes.js";
 import resultRoutes from "./routes/resultRoutes.js";
+import settingsRoutes from "./routes/settingsRoutes.js";
+
 
 const app = express();
 
@@ -30,6 +32,7 @@ await connectDB();
 app.use("/api/users", userRoutes);
 app.use("/api/students", studentRoutes);
 app.use("/api/results", resultRoutes);
+app.use("/api/settings", settingsRoutes);
 
 // VIEW Routes
 app.use("/api/admin", adminViewRoutes);
