@@ -134,20 +134,34 @@ export const getAccount = async (req, res) => {
 // ─────────────────────────────────────────────────────────────
 export const updateAccount = async (req, res) => {
   try {
-    const admin = await Admin.findById(req.admin._id);
-    if (!admin) return res.status(404).json({ message: "Admin not found" });
-
     const { adminName, adminEmail } = req.body;
 
-    if (adminName?.trim())  admin.name  = adminName.trim();
-
-    if (adminEmail?.trim() && adminEmail.trim() !== admin.email) {
-      const taken = await Admin.findOne({ email: adminEmail.trim().toLowerCase() });
-      if (taken) return res.status(400).json({ message: "Email already in use" });
-      admin.email = adminEmail.trim().toLowerCase();
+    if (!adminName?.trim() && !adminEmail?.trim()) {
+      return res.status(400).json({ message: "Provide at least one field to update" });
     }
 
-    const updated = await admin.save();
+    // Check email is not already taken by another admin
+    if (adminEmail?.trim()) {
+      const taken = await Admin.findOne({
+        email: adminEmail.trim().toLowerCase(),
+        _id: { $ne: req.admin._id },
+      });
+      if (taken) return res.status(400).json({ message: "Email already in use" });
+    }
+
+    // Build update object
+    const updates = {};
+    if (adminName?.trim())  updates.name  = adminName.trim();
+    if (adminEmail?.trim()) updates.email = adminEmail.trim().toLowerCase();
+
+    // Use findByIdAndUpdate — bypasses pre-save hook so password is never touched
+    const updated = await Admin.findByIdAndUpdate(
+      req.admin._id,
+      { $set: updates },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    if (!updated) return res.status(404).json({ message: "Admin not found" });
 
     res.json({
       adminName:  updated.name,
