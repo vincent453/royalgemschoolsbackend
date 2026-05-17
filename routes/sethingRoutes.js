@@ -1,14 +1,3 @@
-// routes/settingsRoutes.js
-// ─────────────────────────────────────────────────────────────
-// Add ONE line to your app.js:
-//
-//   import settingsRoutes from "./routes/settingsRoutes.js";
-//   app.use("/api/settings", settingsRoutes);
-//
-// Uses your existing protect middleware from authMiddleware.js
-// Uses multer memoryStorage — same approach as studentRoutes.js
-// ─────────────────────────────────────────────────────────────
-
 import express from "express";
 import multer  from "multer";
 import { protect } from "../middleware/authMiddleware.js";
@@ -20,7 +9,7 @@ import {
   updateAccount,
   changePassword,
   updateNotifications,
-} from "../controllers/settingsController.js";
+} from "../controllers/sethingsController.js";
 
 const router = express.Router();
 
