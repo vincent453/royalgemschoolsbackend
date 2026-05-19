@@ -192,7 +192,8 @@ export const changePassword = async (req, res) => {
       return res.status(400).json({ message: "New password must be different from current password" });
     }
 
-    const admin = await Admin.findById(req.admin._id);
+    // Must select +password — it is excluded by default
+    const admin = await Admin.findById(req.admin._id).select("+password");
     if (!admin) return res.status(404).json({ message: "Admin not found" });
 
     const isMatch = await bcrypt.compare(currentPassword, admin.password);
@@ -200,9 +201,9 @@ export const changePassword = async (req, res) => {
       return res.status(400).json({ message: "Current password is incorrect" });
     }
 
-    // Your adminSchema pre-save hook hashes it automatically
-    admin.password = newPassword;
-    await admin.save();
+    // Hash manually + use findByIdAndUpdate to skip the broken pre-save next() hook
+    const hashed = await bcrypt.hash(newPassword, 12);
+    await Admin.findByIdAndUpdate(req.admin._id, { $set: { password: hashed } });
 
     res.json({ message: "Password changed successfully" });
   } catch (err) {
