@@ -26,6 +26,7 @@ router.use(protect);
 router.get   ("/school",      getSchoolInfo);
 router.patch ("/school",      updateSchoolInfo);
 router.post  ("/school/logo", upload.single("logo"), updateSchoolLogo);
+router.post("/account/avatar", protect, upload.single("avatar"), updateAvatar);
 
 // ── Account ───────────────────────────────────────────────────
 router.get   ("/account",     getAccount);
@@ -36,5 +37,6 @@ router.post  ("/password",    changePassword);
 
 // ── Notifications ─────────────────────────────────────────────
 router.patch ("/notifications", updateNotifications);
+
 
 export default router;

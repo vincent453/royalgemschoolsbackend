@@ -51,6 +51,23 @@ export const getSchoolInfo = async (req, res) => {
   }
 };
 
+export const updateAvatar = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+
+    const result = await uploadToCloudinary(req.file.buffer);
+
+    const updated = await Admin.findByIdAndUpdate(
+      req.admin._id,
+      { $set: { avatar: result.secure_url } },
+      { new: true }
+    ).select("-password");
+
+    res.json({ avatar: updated.avatar });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 // ─────────────────────────────────────────────────────────────
 // PATCH /api/settings/school
 // Updates text fields: schoolName, tagline, email, phone,
