@@ -118,11 +118,12 @@ export const getAccount = async (req, res) => {
     const admin = await Admin.findById(req.admin._id).select("-password");
     if (!admin) return res.status(404).json({ message: "Admin not found" });
 
-   res.json({
-  adminName: admin.name,
+   // In getAccount controller
+res.json({
+  adminName:  admin.name,
   adminEmail: admin.email,
-  role: admin.role,
-  avatar: admin.avatar,
+  role:       admin.role,
+  avatar:     admin.avatar?.trim() || null, // 👈 normalize "" to null
 });
   } catch (err) {
     res.status(500).json({ message: err.message });

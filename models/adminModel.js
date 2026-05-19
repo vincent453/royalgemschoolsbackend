@@ -6,7 +6,7 @@ const adminSchema = new mongoose.Schema({
   email:    { type: String, required: true, unique: true, lowercase: true },
   password: { type: String, required: true },
   role:     { type: String, default: "Super Administrator" },
-  avatar:   { type: String, default: "" },
+  avatar:   { type: String, default: null }, // ✅ null instead of ""
 }, { timestamps: true });
 
 // Hash password before save
