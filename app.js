@@ -15,7 +15,7 @@ import connectDB from "./config/db.js";
 import studentRoutes from "./routes/studentRoutes.js";
 import resultRoutes from "./routes/resultRoutes.js";
 import settingsRoutes from "./routes/sethingRoutes.js";
-import yearbookRoutes from "./routes/yearbookRoutes.js";
+import yearbookRoutes from "./routes/yearBook.js";
 
 
 const app = express();
