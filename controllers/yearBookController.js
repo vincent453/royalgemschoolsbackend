@@ -1,5 +1,5 @@
 import { v2 as cloudinary } from "cloudinary";
-import Yearbook from "../models/yearbookModel.js";
+import Yearbook from "../models/yearBook";
  
 // Cloudinary upload helper
 const uploadToCloudinary = (buffer) => {
