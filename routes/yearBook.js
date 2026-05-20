@@ -4,7 +4,7 @@ import { protect } from "../middleware/authMiddleware.js";
 import {
   getEntries, getPublicEntries, createEntry,
   updateEntry, deleteEntry, uploadPhoto,
-} from "../controllers/yearbookController.js";
+} from "../controllers/yearBookController.js";
  
 const router  = express.Router();
 const upload  = multer({ storage: multer.memoryStorage(), limits: { fileSize: 3 * 1024 * 1024 } });
