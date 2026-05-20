@@ -9,6 +9,7 @@ import {
   updateAccount,
   changePassword,
   updateNotifications,
+  updateAvatar
 } from "../controllers/sethingsController.js";
 
 const router = express.Router();
