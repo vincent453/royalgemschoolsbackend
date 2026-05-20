@@ -15,6 +15,7 @@ import connectDB from "./config/db.js";
 import studentRoutes from "./routes/studentRoutes.js";
 import resultRoutes from "./routes/resultRoutes.js";
 import settingsRoutes from "./routes/sethingRoutes.js";
+import yearbookRoutes from "./routes/yearbookRoutes.js";
 
 
 const app = express();
@@ -33,6 +34,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/students", studentRoutes);
 app.use("/api/results", resultRoutes);
 app.use("/api/settings", settingsRoutes);
+app.use("/api/yearbook", yearbookRoutes);
 
 // VIEW Routes
 app.use("/api/admin", adminViewRoutes);
