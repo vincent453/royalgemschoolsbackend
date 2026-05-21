@@ -1,4 +1,5 @@
-router.post("/login", unifiedLogin);import express from "express";
+import express from "express";
+router.post("/login", unifiedLogin);
 import { unifiedLogin } from "../controllers/authController.js";
 
 const router = express.Router();
