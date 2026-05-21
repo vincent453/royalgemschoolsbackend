@@ -16,6 +16,8 @@ import studentRoutes from "./routes/studentRoutes.js";
 import resultRoutes from "./routes/resultRoutes.js";
 import settingsRoutes from "./routes/sethingRoutes.js";
 import yearbookRoutes from "./routes/yearBook.js";
+import authRoutes from "./routes/authRoutes.js";
+
 
 
 const app = express();
@@ -35,6 +37,7 @@ app.use("/api/students", studentRoutes);
 app.use("/api/results", resultRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/yearbook", yearbookRoutes);
+app.use("/api/auth", authRoutes);
 
 // VIEW Routes
 app.use("/api/admin", adminViewRoutes);

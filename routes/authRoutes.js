@@ -1,25 +1,9 @@
-// import express from "express";
-// import { 
-//   loginAdmin, 
-//   logoutAdmin, 
-//   getAdminProfile,
-//   updateAdminProfile,
-//   changePassword,
-//   registerUser
-// } from "../controllers/authController.js";
-// import { protect } from "../middleware/authMiddleware.js";
+router.post("/login", unifiedLogin);import express from "express";
+import { unifiedLogin } from "../controllers/authController.js";
 
-// const router = express.Router();
+const router = express.Router();
 
-// // Public routes (no authentication required)
-// router.post("/add-user", registerUser);
-// router.post("/login", loginAdmin);
+// Single login endpoint for all staff (admin + teacher)
+router.post("/login", unifiedLogin);
 
-
-// // Protected routes (authentication required)
-// router.post("/logout", protect, logoutAdmin);
-// router.get("/profile", protect, getAdminProfile);
-// router.put("/profile", protect, updateAdminProfile);
-// router.put("/change-password", protect, changePassword);
-
-// export default router;
+export default router;

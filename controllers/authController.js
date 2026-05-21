@@ -5,12 +5,97 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 // ==========================================
-// API ENDPOINTS ONLY (JSON responses)
+// UNIFIED LOGIN — detects role from email
+// POST /api/auth/login
+// ==========================================
+
+export const unifiedLogin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
+
+    // ── Check Admin collection first ──
+    const admin = await Admin.findOne({ email: email.toLowerCase() });
+    if (admin) {
+      const isMatch = await bcrypt.compare(password, admin.password);
+      if (!isMatch) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      const token = jwt.sign(
+        { id: admin._id, role: "admin" },   // ← role included
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" }
+      );
+
+      return res.json({
+        success: true,
+        message: "Login successful",
+        token,
+        role: "admin",
+        user: {
+          _id:   admin._id,
+          name:  admin.name,
+          email: admin.email,
+          role:  "admin",
+        },
+      });
+    }
+
+    // ── Check User collection (teachers, students, parents) ──
+    const user = await User.findOne({ email: email.toLowerCase() }).select("+password");
+    if (user) {
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      if (!user.isActive) {
+        return res.status(403).json({ message: "Account is deactivated. Contact admin." });
+      }
+
+      // Only admin and teacher can access the staff portal
+      if (user.role !== "teacher") {
+        return res.status(403).json({ message: "Access denied. Staff portal only." });
+      }
+
+      const token = jwt.sign(
+        { id: user._id, role: user.role },   // ← role included
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" }
+      );
+
+      return res.json({
+        success: true,
+        message: "Login successful",
+        token,
+        role: user.role,
+        user: {
+          _id:   user._id,
+          name:  user.name,
+          email: user.email,
+          role:  user.role,
+        },
+      });
+    }
+
+    // ── Not found in either collection ──
+    return res.status(401).json({ message: "Invalid email or password" });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ==========================================
+// REGISTER USER (Admin only)
 // ==========================================
 
 export const registerUser = async (req, res) => {
   try {
-    // Ensure only admins can register users
     if (!req.admin) {
       return res.status(403).json({
         message: "Access denied. Only admin can register new users.",
@@ -68,10 +153,10 @@ export const registerUser = async (req, res) => {
       message: "User registered successfully",
       token,
       user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
+        _id:    user._id,
+        name:   user.name,
+        email:  user.email,
+        role:   user.role,
         student: user.student,
       },
     });
@@ -80,7 +165,10 @@ export const registerUser = async (req, res) => {
   }
 };
 
-// Login Admin (API) — returns JSON with token
+// ==========================================
+// ADMIN-SPECIFIC ENDPOINTS (kept for existing routes)
+// ==========================================
+
 export const loginAdmin = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -91,25 +179,28 @@ export const loginAdmin = async (req, res) => {
 
     const admin = await Admin.findOne({ email });
     if (!admin) {
-      return res.status(400).json({ message: "Invalid email or password" });
+      return res.status(401).json({ message: "Invalid email or password" });
     }
 
     const isMatch = await bcrypt.compare(password, admin.password);
     if (!isMatch) {
-      return res.status(400).json({ message: "Invalid email or password" });
+      return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    const token = jwt.sign({ id: admin._id }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
-    });
+    const token = jwt.sign(
+      { id: admin._id, role: "admin" },   // ← role included
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
 
     res.json({
+      success: true,
       message: "Login successful",
       token,
-      expiresIn: "7 days",
+      role: "admin",
       admin: {
-        _id: admin._id,
-        name: admin.name,
+        _id:   admin._id,
+        name:  admin.name,
         email: admin.email,
       },
     });
@@ -118,30 +209,23 @@ export const loginAdmin = async (req, res) => {
   }
 };
 
-// Logout Admin (API) — client must delete the token
 export const logoutAdmin = async (req, res) => {
-  try {
-    res.json({
-      message: "Logout successful",
-      instructions: "Please delete the token from your client storage",
-    });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+  res.json({
+    message: "Logout successful",
+    instructions: "Please delete the token from your client storage",
+  });
 };
 
-// Get Current Admin Profile
 export const getAdminProfile = async (req, res) => {
   try {
     const admin = await Admin.findById(req.admin._id).select("-password");
     if (!admin) {
       return res.status(404).json({ message: "Admin not found" });
     }
-
     res.json({
-      _id: admin._id,
-      name: admin.name,
-      email: admin.email,
+      _id:       admin._id,
+      name:      admin.name,
+      email:     admin.email,
       createdAt: admin.createdAt,
       updatedAt: admin.updatedAt,
     });
@@ -150,7 +234,6 @@ export const getAdminProfile = async (req, res) => {
   }
 };
 
-// Update Admin Profile
 export const updateAdminProfile = async (req, res) => {
   try {
     const admin = await Admin.findById(req.admin._id);
@@ -180,8 +263,8 @@ export const updateAdminProfile = async (req, res) => {
     res.json({
       message: "Profile updated successfully",
       admin: {
-        _id: updatedAdmin._id,
-        name: updatedAdmin.name,
+        _id:   updatedAdmin._id,
+        name:  updatedAdmin.name,
         email: updatedAdmin.email,
       },
     });
@@ -190,7 +273,6 @@ export const updateAdminProfile = async (req, res) => {
   }
 };
 
-// Change Password
 export const changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
@@ -198,7 +280,6 @@ export const changePassword = async (req, res) => {
     if (!currentPassword || !newPassword) {
       return res.status(400).json({ message: "Please provide current and new password" });
     }
-
     if (newPassword.length < 6) {
       return res.status(400).json({ message: "New password must be at least 6 characters" });
     }
