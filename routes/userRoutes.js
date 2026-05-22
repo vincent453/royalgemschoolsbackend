@@ -10,36 +10,34 @@ import {
   deleteUser,
   deactivateUser,
   activateUser,
-  createUser
+  createUser,
 } from "../controllers/userController.js";
-import { protect} from "../middleware/authMiddleware.js";
+import { protect, protectAdminOrUser, protectUser } from "../middleware/authMiddleware.js";
+
 const router = express.Router();
 
 // ==========================================
-// PUBLIC ROUTES (No authentication required)
+// PUBLIC
 // ==========================================
 router.post("/login", loginUser);
 
 // ==========================================
-// USER ROUTES (User authentication required)
+// USER ROUTES — teacher can access their own profile
 // ==========================================
-router.get("/profile", protect, getUserProfile);
-router.put("/profile", protect, updateUserProfile);
-router.put("/change-password", protect, changeUserPassword);
+router.get("/profile",          protectUser, getUserProfile);
+router.put("/profile",          protectUser, updateUserProfile);
+router.put("/change-password",  protectUser, changeUserPassword);
 
 // ==========================================
-// ADMIN ROUTES (Admin authentication required)
+// ADMIN ONLY — manage all users
 // ==========================================
-router.post("/", protect, createUser);      // Admin creates users
-router.get("/", protect, getAllUsers);
+router.post("/",   protect, createUser);
+router.get("/",    protect, getAllUsers);
 router.get("/:id", protect, getUserById);
 router.put("/:id", protect, updateUser);
-router.delete("/:id", protect, deleteUser);
-
-router.post("/:id/delete", protect, deleteUser);      // NEW: POST method (like deactivate/activate)
-
-// Deactivate and Activate
+router.delete("/:id",       protect, deleteUser);
+router.post("/:id/delete",  protect, deleteUser);
 router.post("/:id/deactivate", protect, deactivateUser);
-router.post("/:id/activate", protect, activateUser);
+router.post("/:id/activate",   protect, activateUser);
 
 export default router;

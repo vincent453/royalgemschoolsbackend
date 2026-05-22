@@ -6,21 +6,18 @@ import {
   updateStudent,
   deleteStudent,
 } from "../controllers/studentController.js";
-import { protect } from "../middleware/authMiddleware.js";
+import { protect, protectAdminOrUser } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// ✅ Store in memory — no extra package needed
 const upload = multer({ storage: multer.memoryStorage() });
 
-router.post("/", protect, upload.single("profilePhoto"), addStudent);
-router.get("/", protect, getStudents);
-router.put(
-  "/:id",
-  protect,
-  upload.single("profilePhoto"),
-  updateStudent
-);
+// ✅ Admin + Teacher can view students
+router.get("/", protectAdminOrUser, getStudents);
+
+// 🔒 Admin only — add, edit, delete
+router.post("/",    protect, upload.single("profilePhoto"), addStudent);
+router.put("/:id",  protect, upload.single("profilePhoto"), updateStudent);
 router.delete("/:id", protect, deleteStudent);
 
 export default router;
