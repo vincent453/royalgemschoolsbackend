@@ -54,13 +54,12 @@ export const uploadResult = async (req, res) => {
       const total = Number(s.cwk) + Number(s.hwk) + Number(s.ca1) + Number(s.ca2) + Number(s.exam);
       let grade, remark;
 
-      if (total >= 80)      { grade = "A"; remark = "Excellent"; }
-      else if (total >= 70) { grade = "B"; remark = "Very Good"; }
+      if (total >= 85)      { grade = "A"; remark = "Excellent"; }
+      else if (total >= 70) { grade = "B"; remark = "V.Good"; }
       else if (total >= 60) { grade = "C"; remark = "Good"; }
       else if (total >= 50) { grade = "D"; remark = "Fair"; }
       else if (total >= 40) { grade = "E"; remark = "Poor"; }
       else                  { grade = "F"; remark = "Fail"; }
-
       totalScore += total;
       gradedSubjects.push({ name: s.name, cwk: Number(s.cwk), hwk: Number(s.hwk), ca1: Number(s.ca1), ca2: Number(s.ca2), exam: Number(s.exam), total, grade, remark });
     }
@@ -198,14 +197,14 @@ export const renderResultCard = async (req, res) => {
         headOfSchool: result.headRemark    || "",
       },
       nextTermBegins: result.nextTermBegins || "",
-      gradingScale: [
-        { grade: "A", range: "80 – 100", remark: "Excellent" },
-        { grade: "B", range: "70 – 79",  remark: "V.Good"    },
-        { grade: "C", range: "60 – 69",  remark: "Good"      },
-        { grade: "D", range: "50 – 59",  remark: "Fair"      },
-        { grade: "E", range: "40 – 49",  remark: "Poor"      },
-        { grade: "F", range: "0  – 39",  remark: "Fail"      },
-      ],
+     gradingScale: [
+      { grade: "A", range: "85 – 100", remark: "Excellent" },
+      { grade: "B", range: "70 – 84",  remark: "V.Good"    },
+      { grade: "C", range: "60 – 69",  remark: "Good"      },
+      { grade: "D", range: "50 – 59",  remark: "Fair"      },
+      { grade: "E", range: "40 – 49",  remark: "Poor"      },
+      { grade: "F", range: "0 – 39",   remark: "Fail"      },
+    ]
     };
 
     res.render("reportCard", reportData);
