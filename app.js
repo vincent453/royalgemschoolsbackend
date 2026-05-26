@@ -18,6 +18,8 @@ import settingsRoutes from "./routes/sethingRoutes.js";
 import yearbookRoutes from "./routes/yearBook.js";
 import authRoutes from "./routes/authRoutes.js";
 import pinRoutes from "./routes/pinRoutes.js";
+import blogRoutes from "./routes/blogRoutes.js";
+
 
 
 const app = express();
@@ -32,6 +34,7 @@ app.use(morgan("dev"));
 await connectDB();
 
 // API Routes
+app.use("/api/blog", blogRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/students", studentRoutes);
 app.use("/api/results", resultRoutes);
