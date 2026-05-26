@@ -1,5 +1,5 @@
 import { v2 as cloudinary } from "cloudinary";
-import Blog from "../models/blogModel.js";
+import Blog from "../models/BlogModel.js"
 
 const uploadToCloudinary = (buffer) => {
   cloudinary.config({
