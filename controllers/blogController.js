@@ -1,14 +1,12 @@
 import { v2 as cloudinary } from "cloudinary";
-import Blog from  "../models/BlogModel.js"
+import Blog from "../models/blogModel.js";
 
-// ── Cloudinary helper (same pattern as studentController) ──────
 const uploadToCloudinary = (buffer) => {
   cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key:    process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET,
   });
-
   return new Promise((resolve, reject) => {
     cloudinary.uploader
       .upload_stream({ folder: "blog_images" }, (error, result) => {
@@ -19,9 +17,7 @@ const uploadToCloudinary = (buffer) => {
   });
 };
 
-// ─────────────────────────────────────────────────────────────
-// GET /api/blog  — public, returns all posts newest first
-// ─────────────────────────────────────────────────────────────
+// GET /api/blog
 export const getAllPosts = async (req, res) => {
   try {
     const { category } = req.query;
@@ -33,9 +29,7 @@ export const getAllPosts = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────
-// GET /api/blog/:id  — public, single post
-// ─────────────────────────────────────────────────────────────
+// GET /api/blog/:id
 export const getPostById = async (req, res) => {
   try {
     const post = await Blog.findById(req.params.id);
@@ -46,26 +40,21 @@ export const getPostById = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────
-// POST /api/blog  — admin or teacher
-// multipart/form-data: image file + { title, category, date, href }
-// ─────────────────────────────────────────────────────────────
+// POST /api/blog
 export const createPost = async (req, res) => {
   try {
-    const { title, category, date, href } = req.body;
+    const { title, category, date, href, content } = req.body;
 
     if (!title?.trim() || !category?.trim() || !date?.trim()) {
       return res.status(400).json({ message: "Title, category, and date are required" });
     }
 
-    // Cloudinary upload if a file was sent
     let imageUrl = null;
     if (req.file) {
       const result = await uploadToCloudinary(req.file.buffer);
       imageUrl = result.secure_url;
     }
 
-    // Detect who is creating (req.admin = super admin, req.user = teacher)
     const createdBy = req.admin
       ? { id: req.admin._id, role: "admin" }
       : { id: req.user._id,  role: req.user.role };
@@ -77,6 +66,7 @@ export const createPost = async (req, res) => {
       category: category.trim(),
       date:     date.trim(),
       href:     href?.trim() ?? "",
+      content:  content?.trim() ?? "",
       image:    imageUrl,
       author,
       createdBy,
@@ -88,20 +78,17 @@ export const createPost = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────
-// PATCH /api/blog/:id  — admin or teacher (owner or admin)
-// ─────────────────────────────────────────────────────────────
+// PATCH /api/blog/:id
 export const updatePost = async (req, res) => {
   try {
     const post = await Blog.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
 
-    const allowed = ["title", "category", "date", "href"];
+    const allowed = ["title", "category", "date", "href", "content"];
     allowed.forEach((key) => {
       if (req.body[key] !== undefined) post[key] = req.body[key];
     });
 
-    // Replace image if a new file was uploaded
     if (req.file) {
       const result = await uploadToCloudinary(req.file.buffer);
       post.image = result.secure_url;
@@ -114,9 +101,7 @@ export const updatePost = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────
-// DELETE /api/blog/:id  — admin or teacher
-// ─────────────────────────────────────────────────────────────
+// DELETE /api/blog/:id
 export const deletePost = async (req, res) => {
   try {
     const post = await Blog.findByIdAndDelete(req.params.id);
