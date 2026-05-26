@@ -18,7 +18,7 @@ import settingsRoutes from "./routes/sethingRoutes.js";
 import yearbookRoutes from "./routes/yearBook.js";
 import authRoutes from "./routes/authRoutes.js";
 import pinRoutes from "./routes/pinRoutes.js";
-import blogRoutes from "./routes/blogRoutes.js";
+import blogRoutes from "./routes/blogRoutes.js"
 
 
 
