@@ -3,7 +3,7 @@ import multer from "multer";
 import {
   getAllPosts,
   getPostById,
-  createPost,
+  createPost,   
   updatePost,
   deletePost,
 } from "../controllers/blogController.js";
