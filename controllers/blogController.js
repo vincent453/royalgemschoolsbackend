@@ -1,5 +1,5 @@
 import { v2 as cloudinary } from "cloudinary";
-import Blog from  "../models/BlogModel"
+import Blog from  "../models/BlogModel.js"
 
 // ── Cloudinary helper (same pattern as studentController) ──────
 const uploadToCloudinary = (buffer) => {
