@@ -51,8 +51,13 @@ export const createPost = async (req, res) => {
 
     let imageUrl = null;
     if (req.file) {
-      const result = await uploadToCloudinary(req.file.buffer);
-      imageUrl = result.secure_url;
+      try {
+        const result = await uploadToCloudinary(req.file.buffer);
+        imageUrl = result.secure_url;
+      } catch (cloudinaryErr) {
+        console.error("Cloudinary upload failed:", cloudinaryErr);
+        return res.status(500).json({ message: "Image upload failed. Please try again." });
+      }
     }
 
     const createdBy = req.admin
@@ -74,7 +79,8 @@ export const createPost = async (req, res) => {
 
     res.status(201).json(post);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("createPost error:", err);
+    res.status(500).json({ message: err.message ?? "Something went wrong" });
   }
 };
 
