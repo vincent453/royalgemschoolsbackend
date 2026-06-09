@@ -1,5 +1,5 @@
 import express from "express";
-import { protect, protectStaffAdmin } from "../middleware/authMiddleware.js";
+import { protect, protectStaffAdmin, protectAdminOrUser } from "../middleware/authMiddleware.js";
 import { setClassConfig, getClassConfig, getAllConfigs } from "../controllers/classSubjectConfigController.js";
 
 const router = express.Router();
