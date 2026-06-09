@@ -187,3 +187,53 @@ export const publicOrProtect = async (req, res, next) => {
   if (!req.headers.authorization) return next();
   return protectAdminOrUser(req, res, next);
 };
+
+// Protects routes that subject teachers and class teachers can access
+export const protectTeacher = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Not authorized, no token provided" });
+  }
+
+  try {
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Allow super admin
+    const admin = await Admin.findById(decoded.id).select("-password");
+    if (admin) {
+      req.admin = admin;
+      req.isSuperAdmin = true;
+      return next();
+    }
+
+    // Allow user-admin, subject_teacher, class_teacher, teacher
+    const user = await User.findById(decoded.id).select("-password");
+    if (user && user.isActive) {
+      const allowed = ["admin", "subject_teacher", "class_teacher", "teacher"];
+      if (!allowed.includes(user.role)) {
+        return res.status(403).json({ message: "Access denied." });
+      }
+      req.user = user;
+      return next();
+    }
+
+    return res.status(401).json({ message: "Not authorized." });
+  } catch (error) {
+    return res.status(401).json({ message: "Not authorized, token failed" });
+  }
+};
+
+// Use after protectTeacher — ensures only subject teachers (or admins) pass
+export const subjectTeacherOnly = (req, res, next) => {
+  if (req.isSuperAdmin) return next();
+  if (req.user?.role === "subject_teacher" || req.user?.role === "admin") return next();
+  return res.status(403).json({ message: "Access denied. Subject teachers only." });
+};
+
+// Use after protectTeacher — ensures only class teachers (or admins) pass
+export const classTeacherOnly = (req, res, next) => {
+  if (req.isSuperAdmin) return next();
+  if (req.user?.role === "class_teacher" || req.user?.role === "admin") return next();
+  return res.status(403).json({ message: "Access denied. Class teachers only." });
+};

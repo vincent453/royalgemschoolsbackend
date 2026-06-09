@@ -19,6 +19,10 @@ import yearbookRoutes from "./routes/yearBook.js";
 import authRoutes from "./routes/authRoutes.js";
 import pinRoutes from "./routes/pinRoutes.js";
 import blogRoutes from "./routes/blogRoutes.js"
+import subjectAssignmentRoutes  from "./routes/subjectAssignmentRoutes.js";
+import subjectResultRoutes      from "./routes/subjectResultRoutes.js";
+import classSubjectConfigRoutes from "./routes/classSubjectConfigRoutes.js";
+
 
 
 
@@ -42,6 +46,10 @@ app.use("/api/settings", settingsRoutes);
 app.use("/api/yearbook", yearbookRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/pins", pinRoutes);
+app.use("/api/assignments",    subjectAssignmentRoutes);
+app.use("/api/subject-results", subjectResultRoutes);
+app.use("/api/class-config",   classSubjectConfigRoutes);
+
 
 
 // VIEW Routes

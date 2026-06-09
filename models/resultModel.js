@@ -32,6 +32,11 @@ const resultSchema = new mongoose.Schema(
     gpa:          { type: Number, default: 0 },
     position:     { type: String },
     resultStatus: { type: String, default: "Pass" },
+    source: {
+    type: String,
+    enum: ["direct", "aggregated"],  // direct = old flow, aggregated = new flow
+    default: "direct",
+  },
 
     // ── Attendance ────────────────────────────────────────
     timesSchoolOpened: { type: Number, default: 0 },

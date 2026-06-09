@@ -25,8 +25,8 @@ const userSchema = new mongoose.Schema(
     role: {
       type: String,
       enum: {
-        values: ["admin", "student", "parent", "teacher"],
-        message: "Role must be either admin, student, parent, or teacher",
+        values: ["admin", "student", "parent", "teacher", "subject_teacher", "class_teacher"],
+        message: "Invalid role",
       },
       default: "student",
     },
@@ -47,6 +47,19 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
     assignedClass: {
+      type: String,
+      trim: true,
+    },
+    // Add these new fields to the existing schema:
+    assignedSubject: {
+      type: String,
+      trim: true,
+    },
+    assignedClasses: [{   // for subject teachers — multiple classes
+      type: String,
+      trim: true,
+    }],
+    assignedClass: {      // for class teachers — single class
       type: String,
       trim: true,
     },

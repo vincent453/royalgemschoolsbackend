@@ -7,6 +7,7 @@ import {
 } from "../controllers/resultController.js";
 import { protect, protectAdminOrUser } from "../middleware/authMiddleware.js";
 import Result from "../models/resultModel.js";
+import { finalizeResult } from "../controllers/resultController.js";
 
 const router = express.Router();
 
@@ -40,5 +41,8 @@ router.delete("/:id", protect, async (req, res) => {
     });
   }
 });
+
+// Class teacher finalizes a result from subject results
+router.post("/finalize", protectAdminOrUser, finalizeResult);
 
 export default router;

@@ -1,6 +1,7 @@
 import Result from "../models/resultModel.js";
 import Student from "../models/studentModel.js";
-
+import SubjectResult from "../models/subjectResultModel.js";
+import ClassSubjectConfig from "../models/classSubjectConfigModel.js";
 // ─────────────────────────────────────────────────────────────
 // UPLOAD RESULT
 // ─────────────────────────────────────────────────────────────
@@ -289,3 +290,105 @@ function convertNumberToWords(num) {
 
   return words.trim();
 }
+
+export const finalizeResult = async (req, res) => {
+  try {
+    const {
+      studentId, term, session,
+      timesSchoolOpened, timesPresent, numberOfStudentsInClass,
+      affectiveDispositions, psychomotorDispositions, inclusiveLearningActivities,
+      teacherRemark, headRemark, nextTermBegins,
+    } = req.body;
+
+    const student = await Student.findById(studentId);
+    if (!student) return res.status(404).json({ message: "Student not found" });
+
+    // Check if result already finalized
+    const existing = await Result.findOne({ student: studentId, term, session });
+    if (existing) {
+      return res.status(400).json({
+        message: "Result already finalized. Use the update endpoint.",
+      });
+    }
+
+    // Fetch all subject results for this student
+    const subjectResults = await SubjectResult.find({
+      student: studentId,
+      term,
+      session,
+    });
+
+    if (!subjectResults.length) {
+      return res.status(400).json({
+        message: "No subject results found. Subject teachers must upload scores first.",
+      });
+    }
+
+    // Check required subjects are all uploaded
+    const config = await ClassSubjectConfig.findOne({
+      classLevel: student.classLevel,
+      term,
+      session,
+    });
+
+    if (config?.requiredSubjects?.length) {
+      const uploadedSubjects = subjectResults.map((r) => r.subject);
+      const missing = config.requiredSubjects.filter((s) => !uploadedSubjects.includes(s));
+
+      if (missing.length > 0) {
+        return res.status(400).json({
+          message: `Cannot finalize result. Missing subjects: ${missing.join(", ")}`,
+          missingSubjects: missing,
+          uploadedSubjects,
+        });
+      }
+    }
+
+    // Build subjects array in the same shape as existing Result schema
+    const subjects = subjectResults.map((sr) => ({
+      name:   sr.subject,
+      cwk:    sr.cwk,
+      hwk:    sr.hwk,
+      ca1:    sr.ca1,
+      ca2:    sr.ca2,
+      exam:   sr.exam,
+      total:  sr.total,
+      grade:  sr.grade,
+      remark: sr.remark,
+    }));
+
+    const totalScore = subjects.reduce((sum, s) => sum + s.total, 0);
+    const average    = totalScore / subjects.length;
+    const gpa = average >= 80 ? 4.0 : average >= 70 ? 3.5 : average >= 60 ? 3.0
+              : average >= 50 ? 2.0 : average >= 40 ? 1.0 : 0.0;
+    const resultStatus = average >= 40 ? "Pass" : "Fail";
+
+    const result = await Result.create({
+      student: studentId,
+      term,
+      session,
+      subjects,
+      totalScore,
+      average: average.toFixed(2),
+      classAverage: 0,
+      gpa: gpa.toFixed(2),
+      resultStatus,
+      source: "aggregated",   // marks this as coming from the new flow
+      timesSchoolOpened:       timesSchoolOpened       ?? 0,
+      timesPresent:            timesPresent            ?? 0,
+      numberOfStudentsInClass: numberOfStudentsInClass ?? 0,
+      affectiveDispositions:       affectiveDispositions       ?? [],
+      psychomotorDispositions:     psychomotorDispositions     ?? [],
+      inclusiveLearningActivities: inclusiveLearningActivities ?? [],
+      teacherRemark,
+      headRemark,
+      nextTermBegins,
+    });
+
+    await recomputeClassAverage(student.classLevel, term, session);
+    const updated = await Result.findById(result._id);
+    res.status(201).json({ message: "Result finalized successfully", result: updated });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
