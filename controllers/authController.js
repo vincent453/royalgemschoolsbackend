@@ -8,18 +8,13 @@ import jwt from "jsonwebtoken";
 // ==========================================
 // UNIFIED LOGIN — one endpoint, all roles
 // POST /api/auth/login
-//
-// Staff  → send { email, password }
-// Student/Parent → send { regNumber, pin, role: "student" | "parent" }
 // ==========================================
-
 export const unifiedLogin = async (req, res) => {
   try {
     const { email, password, regNumber, pin, role } = req.body;
 
     // ── BRANCH A: regNumber + PIN → student or parent ──────────────
     if (regNumber && pin) {
-      // Find the student
       const student = await Student.findOne({
         regNumber: regNumber.trim().toUpperCase(),
       });
@@ -27,12 +22,11 @@ export const unifiedLogin = async (req, res) => {
         return res.status(401).json({ message: "Invalid registration number or PIN" });
       }
 
-      // Find a valid PIN
       const pinDoc = await Pin.findOne({
         pin: pin.trim(),
         $or: [
-          { usedBy: student._id },       // already linked to this student
-          { usedBy: null, isUsed: false }, // fresh unlinked PIN
+          { usedBy: student._id },
+          { usedBy: null, isUsed: false },
         ],
       });
 
@@ -40,14 +34,12 @@ export const unifiedLogin = async (req, res) => {
         return res.status(401).json({ message: "Invalid registration number or PIN" });
       }
 
-      // Check expiry
       if (pinDoc.expiresAt && new Date() > pinDoc.expiresAt) {
         return res.status(401).json({
           message: "This PIN has expired. Please contact the school office.",
         });
       }
 
-      // Link PIN to student on first use
       if (!pinDoc.usedBy) {
         pinDoc.usedBy = student._id;
         pinDoc.usedAt = new Date();
@@ -55,7 +47,6 @@ export const unifiedLogin = async (req, res) => {
         await pinDoc.save();
       }
 
-      // role comes from the frontend tab ("student" or "parent")
       const portalRole = role === "parent" ? "parent" : "student";
 
       const token = jwt.sign(
@@ -70,14 +61,14 @@ export const unifiedLogin = async (req, res) => {
         token,
         role: portalRole,
         student: {
-          _id:         student._id,
-          firstName:   student.firstName,
-          lastName:    student.lastName,
-          regNumber:   student.regNumber,
-          classLevel:  student.classLevel,
-          session:     student.session,
-          gender:      student.gender,
-          profilePhoto: student.profilePhoto,
+          _id:             student._id,
+          firstName:       student.firstName,
+          lastName:        student.lastName,
+          regNumber:       student.regNumber,
+          classLevel:      student.classLevel,
+          session:         student.session,
+          gender:          student.gender,
+          profilePhoto:    student.profilePhoto,
           parentFirstName: student.parentFirstName,
           parentLastName:  student.parentLastName,
           parentPhone:     student.parentPhone,
@@ -86,9 +77,9 @@ export const unifiedLogin = async (req, res) => {
       });
     }
 
-    // ── BRANCH B: email + password → admin or teacher ───────────────
+    // ── BRANCH B: email + password → super admin or staff ──────────
     if (email && password) {
-      // Check Admin collection first
+      // 1. Check Admin collection (super admin)
       const admin = await Admin.findOne({ email: email.toLowerCase() });
       if (admin) {
         const isMatch = await bcrypt.compare(password, admin.password);
@@ -116,7 +107,7 @@ export const unifiedLogin = async (req, res) => {
         });
       }
 
-      // Check User collection (teachers)
+      // 2. Check User collection (teachers + admin-role users)
       const user = await User.findOne({ email: email.toLowerCase() }).select("+password");
       if (user) {
         const isMatch = await bcrypt.compare(password, user.password);
@@ -128,7 +119,8 @@ export const unifiedLogin = async (req, res) => {
           return res.status(403).json({ message: "Account is deactivated. Contact admin." });
         }
 
-        if (user.role !== "teacher") {
+        const allowedRoles = ["teacher", "admin"];
+        if (!allowedRoles.includes(user.role)) {
           return res.status(403).json({ message: "Access denied. Staff portal only." });
         }
 
@@ -168,7 +160,6 @@ export const unifiedLogin = async (req, res) => {
 // ==========================================
 // REGISTER USER (Admin only)
 // ==========================================
-
 export const registerUser = async (req, res) => {
   try {
     if (!req.admin) {
@@ -241,9 +232,8 @@ export const registerUser = async (req, res) => {
 };
 
 // ==========================================
-// ADMIN-SPECIFIC ENDPOINTS (kept for existing routes)
+// ADMIN-SPECIFIC ENDPOINTS
 // ==========================================
-
 export const loginAdmin = async (req, res) => {
   try {
     const { email, password } = req.body;
