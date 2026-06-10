@@ -119,7 +119,7 @@ export const unifiedLogin = async (req, res) => {
           return res.status(403).json({ message: "Account is deactivated. Contact admin." });
         }
 
-        const allowedRoles = ["teacher", "admin"];
+        const allowedRoles = ["teacher", "admin", "subject_teacher", "class_teacher"];
         if (!allowedRoles.includes(user.role)) {
           return res.status(403).json({ message: "Access denied. Staff portal only." });
         }
