@@ -111,15 +111,18 @@ export const getUserProfile = async (req, res) => {
     }
 
     res.json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      phoneNumber: user.phoneNumber,
-      student: user.student,
-      isActive: user.isActive,
-      lastLogin: user.lastLogin,
-      createdAt: user.createdAt,
+      _id:            user._id,
+      name:           user.name,
+      email:          user.email,
+      role:           user.role,
+      phoneNumber:    user.phoneNumber,
+      subject:        user.subject        ?? "",
+      assignedClass:  user.assignedClass  ?? "",
+      assignedClasses:user.assignedClasses ?? [],
+      student:        user.student,
+      isActive:       user.isActive,
+      lastLogin:      user.lastLogin,
+      createdAt:      user.createdAt,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
