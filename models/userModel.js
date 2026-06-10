@@ -42,27 +42,23 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    subjects: {
+    // subject: the subject(s) this teacher teaches (comma-separated string)
+    subject: {
       type: String,
       trim: true,
+      default: "",
     },
+    // assignedClass: primary class (class teacher)
     assignedClass: {
       type: String,
       trim: true,
+      default: "",
     },
-    // Add these new fields to the existing schema:
-    assignedSubject: {
-      type: String,
-      trim: true,
-    },
-    assignedClasses: [{   // for subject teachers — multiple classes
+    // assignedClasses: all classes a subject teacher covers
+    assignedClasses: [{
       type: String,
       trim: true,
     }],
-    assignedClass: {      // for class teachers — single class
-      type: String,
-      trim: true,
-    },
     isActive: {
       type: Boolean,
       default: true,

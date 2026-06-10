@@ -9,7 +9,10 @@ import bcrypt from "bcryptjs";
 export const createUser = async (req, res) => {
   try {
     console.log("📥 Body received:", req.body);
-    const { name, email, password, role, subject, phoneNumber, isActive } = req.body;
+    const {
+      name, email, password, role, phoneNumber, isActive,
+      subject, assignedClass, assignedClasses,
+    } = req.body;
 
     if (!name || !email || !password || !role) {
       return res.status(400).json({ message: "Name, email, password and role are required" });
@@ -25,7 +28,9 @@ export const createUser = async (req, res) => {
       email,
       password,
       role,
-      subject,
+      subject:         subject         ?? "",
+      assignedClass:   assignedClass   ?? "",
+      assignedClasses: Array.isArray(assignedClasses) ? assignedClasses : [],
       phoneNumber,
       isActive: isActive !== undefined ? isActive : true,
     });
@@ -33,12 +38,14 @@ export const createUser = async (req, res) => {
     res.status(201).json({
       message: "User created successfully",
       user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        subject: user.subject,
-        isActive: user.isActive,
+        _id:             user._id,
+        name:            user.name,
+        email:           user.email,
+        role:            user.role,
+        subject:         user.subject,
+        assignedClass:   user.assignedClass,
+        assignedClasses: user.assignedClasses,
+        isActive:        user.isActive,
       },
     });
   } catch (error) {
