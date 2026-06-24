@@ -143,6 +143,73 @@ export const getAllResults = async (req, res) => {
   }
 };
 
+export const getPendingResults = async (req, res) => {
+  try {
+    let classFilter = {};
+    if (req.user && ["teacher", "subject_teacher", "class_teacher"].includes(req.user.role)) {
+      const assignedClasses = new Set();
+      if (req.user.assignedClass) assignedClasses.add(req.user.assignedClass);
+      if (Array.isArray(req.user.assignedClasses)) {
+        req.user.assignedClasses.forEach((cls) => {
+          if (cls) assignedClasses.add(cls);
+        });
+      }
+
+      if (assignedClasses.size === 0) {
+        return res.status(200).json([]);
+      }
+
+      classFilter.classLevel = { $in: Array.from(assignedClasses) };
+    }
+
+    const subjectResults = await SubjectResult.find(classFilter)
+      .populate("student", "firstName lastName regNumber profilePhoto classLevel");
+
+    const grouped = new Map();
+    subjectResults.forEach((result) => {
+      if (!result.student) return;
+      const key = `${result.student._id}-${result.term}-${result.session}-${result.classLevel}`;
+      const existing = grouped.get(key);
+      if (existing) {
+        if (!existing.subjects.includes(result.subject)) existing.subjects.push(result.subject);
+        existing.subjectCount += 1;
+      } else {
+        grouped.set(key, {
+          student: result.student,
+          term: result.term,
+          session: result.session,
+          classLevel: result.classLevel,
+          subjectCount: 1,
+          subjects: [result.subject],
+        });
+      }
+    });
+
+    const combos = Array.from(grouped.values());
+    if (combos.length === 0) return res.json([]);
+
+    const resultQueries = combos.map((item) => ({
+      student: item.student._id,
+      term: item.term,
+      session: item.session,
+    }));
+
+    const existingResults = await Result.find({ $or: resultQueries }).select("student term session");
+    const existingSet = new Set(
+      existingResults.map((r) => `${r.student.toString()}-${r.term}-${r.session}`)
+    );
+
+    const pending = combos.filter((item) => {
+      const key = `${item.student._id}-${item.term}-${item.session}`;
+      return !existingSet.has(key);
+    });
+
+    res.status(200).json(pending);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // ─────────────────────────────────────────────────────────────
 // RENDER EJS REPORT CARD
 // ─────────────────────────────────────────────────────────────

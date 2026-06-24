@@ -86,6 +86,7 @@ export const updateStudent = async (req, res) => {
 // Teachers → return students for their assigned class(es)
 export const getStudents = async (req, res) => {
   try {
+    const { classLevel } = req.query;
     let filter = {};
 
     if (req.user && ["teacher", "subject_teacher", "class_teacher"].includes(req.user.role)) {
@@ -101,9 +102,17 @@ export const getStudents = async (req, res) => {
         return res.status(200).json([]);
       }
 
-      filter.classLevel = { $in: Array.from(assignedClasses) };
+      if (classLevel) {
+        if (!assignedClasses.has(classLevel)) {
+          return res.status(403).json({ message: "You are not authorized to view that class." });
+        }
+        filter.classLevel = classLevel;
+      } else {
+        filter.classLevel = { $in: Array.from(assignedClasses) };
+      }
+    } else if (classLevel) {
+      filter.classLevel = classLevel;
     }
-    // req.admin means it's a super admin — no filter, see everything
 
     const students = await Student.find(filter).sort({ createdAt: -1 });
     res.status(200).json(students);

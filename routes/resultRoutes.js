@@ -11,6 +11,9 @@ import { finalizeResult } from "../controllers/resultController.js";
 
 const router = express.Router();
 
+// ✅ Admin + Teacher can view all pending results ready to finalize
+router.get("/pending", protectAdminOrUser, getPendingResults);
+
 // ✅ Admin + Teacher can view all results
 router.get("/", protectAdminOrUser, getAllResults);
 
