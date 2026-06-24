@@ -4,10 +4,11 @@ import {
   getStudentResult,
   renderResultCard,
   getAllResults,
+  getPendingResults,
+  finalizeResult,
 } from "../controllers/resultController.js";
 import { protect, protectAdminOrUser } from "../middleware/authMiddleware.js";
 import Result from "../models/resultModel.js";
-import { finalizeResult } from "../controllers/resultController.js";
 
 const router = express.Router();
 
