@@ -25,9 +25,9 @@ export const createAssignment = async (req, res) => {
 
     // Sync back to user record
     await User.findByIdAndUpdate(teacherId, {
-      assignedSubject: subject,
-      $addToSet: { assignedClasses: { $each: classLevels } },
-    });
+    subject: subject,   // ✅ correct field name
+    $addToSet: { assignedClasses: { $each: classLevels } },
+  });
 
     res.status(201).json(assignment);
   } catch (err) {
