@@ -2,6 +2,9 @@ import SubjectResult from "../models/subjectResultModel.js";
 import SubjectAssignment from "../models/subjectAssignmentModel.js";
 import Student from "../models/studentModel.js";
 
+const normalizeString = (value) =>
+  String(value || "").trim().toLowerCase();
+
 const gradeAndRemark = (total) => {
   if (total >= 85) return { grade: "A", remark: "Excellent" };
   if (total >= 70) return { grade: "B", remark: "V.Good" };
@@ -70,9 +73,24 @@ export const uploadSubjectResult = async (req, res) => {
     const total = scores.cwk + scores.hwk + scores.ca1 + scores.ca2 + scores.exam;
     const { grade, remark } = gradeAndRemark(total);
 
+    const normalizedSubject = normalizeString(subject);
+    const normalizedClass   = normalizeString(classLevel);
+
     const result = await SubjectResult.findOneAndUpdate(
-      { student: studentId, subject, term, session },
-      { ...scores, total, grade, remark, teacher: teacherId, classLevel, status: "submitted" },
+      { student: studentId, term, session, normalizedSubject, normalizedClass },
+      {
+        student: studentId,
+        teacher: teacherId,
+        subject: subject.trim(),
+        classLevel: classLevel.trim(),
+        normalizedSubject,
+        normalizedClass,
+        ...scores,
+        total,
+        grade,
+        remark,
+        status: "submitted",
+      },
       { upsert: true, new: true }
     );
 
@@ -127,9 +145,21 @@ export const getStudentSubjectResults = async (req, res) => {
       classLevel,
       term,
       session,
-    }).populate("teacher", "name");
+    })
+      .sort({ updatedAt: -1 })
+      .populate("teacher", "name");
 
-    res.json(results);
+    const uniqueResults = [];
+    const seenSubjects = new Set();
+    results.forEach((result) => {
+      const subjectKey = normalizeString(result.subject);
+      if (!seenSubjects.has(subjectKey)) {
+        seenSubjects.add(subjectKey);
+        uniqueResults.push(result);
+      }
+    });
+
+    res.json(uniqueResults);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
