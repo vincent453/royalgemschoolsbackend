@@ -1,5 +1,5 @@
 import express from "express";
-import { protectTeacher, protectAdminOrUser } from "../middleware/authMiddleware.js";
+import { protectTeacher, protectAdminOrUser, subjectTeacherOnly } from "../middleware/authMiddleware.js";
 import {
   uploadSubjectResult,
   getClassSubjectResults,
@@ -9,9 +9,9 @@ import {
 
 const router = express.Router();
 
-router.post("/",                          protectTeacher, uploadSubjectResult);
-router.get("/class",                      protectTeacher, getClassSubjectResults);
+router.post("/",                          protectTeacher, subjectTeacherOnly, uploadSubjectResult);
+router.get("/class",                      protectTeacher, subjectTeacherOnly, getClassSubjectResults);
 router.get("/student/:studentId",         protectAdminOrUser, getStudentSubjectResults);
-router.delete("/:id",                     protectTeacher, deleteSubjectResult);
+router.delete("/:id",                     protectTeacher, subjectTeacherOnly, deleteSubjectResult);
 
 export default router;

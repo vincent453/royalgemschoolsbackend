@@ -83,18 +83,25 @@ export const updateStudent = async (req, res) => {
 // @desc Get students
 // @route GET /api/students
 // Admin  → returns ALL students
-// Teacher → returns only students in their assignedClass
+// Teachers → return students for their assigned class(es)
 export const getStudents = async (req, res) => {
   try {
     let filter = {};
 
-    if (req.user && req.user.role === "teacher") {
-      // Teacher is set on req.user by protectAdminOrUser middleware
-      if (!req.user.assignedClass) {
-        // Teacher has no class assigned yet — return empty array
+    if (req.user && ["teacher", "subject_teacher", "class_teacher"].includes(req.user.role)) {
+      const assignedClasses = new Set();
+      if (req.user.assignedClass) assignedClasses.add(req.user.assignedClass);
+      if (Array.isArray(req.user.assignedClasses)) {
+        req.user.assignedClasses.forEach((cls) => {
+          if (cls) assignedClasses.add(cls);
+        });
+      }
+
+      if (assignedClasses.size === 0) {
         return res.status(200).json([]);
       }
-      filter.classLevel = req.user.assignedClass;
+
+      filter.classLevel = { $in: Array.from(assignedClasses) };
     }
     // req.admin means it's a super admin — no filter, see everything
 

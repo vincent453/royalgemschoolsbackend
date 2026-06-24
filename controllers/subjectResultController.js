@@ -18,6 +18,12 @@ export const uploadSubjectResult = async (req, res) => {
     const { studentId, subject, classLevel, term, session, cwk, hwk, ca1, ca2, exam } = req.body;
     const teacherId = req.user._id;
 
+    if (req.user?.role === "class_teacher" && !req.isSuperAdmin) {
+      return res.status(403).json({
+        message: "Class teachers cannot upload subject scores.",
+      });
+    }
+
     // Verify teacher is assigned to this subject + class
     const assignment = await SubjectAssignment.findOne({
       teacher: teacherId,
@@ -27,7 +33,27 @@ export const uploadSubjectResult = async (req, res) => {
       isActive: true,
     });
 
-    if (!assignment && !req.isSuperAdmin) {
+    const normalize = (value) => String(value || "").trim().toLowerCase();
+    const normalizedSubject = normalize(subject);
+    const normalizedClass = normalize(classLevel);
+
+    const profileSubjects = (req.user?.subject || "")
+      .split(",")
+      .map((s) => normalize(s))
+      .filter(Boolean);
+
+    const profileClasses = [
+      ...(Array.isArray(req.user?.assignedClasses) ? req.user.assignedClasses : []),
+      req.user?.assignedClass,
+    ]
+      .filter(Boolean)
+      .map((c) => normalize(c));
+
+    const profileMatch =
+      profileSubjects.includes(normalizedSubject) &&
+      profileClasses.includes(normalizedClass);
+
+    if (!assignment && !req.isSuperAdmin && !profileMatch) {
       return res.status(403).json({
         message: "You are not assigned to teach this subject in this class.",
       });
