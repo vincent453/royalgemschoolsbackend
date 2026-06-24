@@ -36,13 +36,12 @@ export const uploadSubjectResult = async (req, res) => {
       isActive: true,
     });
 
-    const normalize = (value) => String(value || "").trim().toLowerCase();
-    const normalizedSubject = normalize(subject);
-    const normalizedClass = normalize(classLevel);
+    const normalizedSubject = normalizeString(subject);
+    const normalizedClass = normalizeString(classLevel);
 
     const profileSubjects = (req.user?.subject || "")
       .split(",")
-      .map((s) => normalize(s))
+      .map((s) => normalizeString(s))
       .filter(Boolean);
 
     const profileClasses = [
