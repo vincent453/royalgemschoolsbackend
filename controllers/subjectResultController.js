@@ -120,10 +120,11 @@ export const getClassSubjectResults = async (req, res) => {
 export const getStudentSubjectResults = async (req, res) => {
   try {
     const { studentId } = req.params;
-    const { term, session } = req.query;
+    const { classLevel, term, session } = req.query;
 
     const results = await SubjectResult.find({
       student: studentId,
+      classLevel,
       term,
       session,
     }).populate("teacher", "name");
