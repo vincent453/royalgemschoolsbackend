@@ -22,6 +22,7 @@ import blogRoutes from "./routes/blogRoutes.js"
 import subjectAssignmentRoutes  from "./routes/subjectAssignmentRoutes.js";
 import subjectResultRoutes      from "./routes/subjectResultRoutes.js";
 import classSubjectConfigRoutes from "./routes/classSubjectConfigRoutes.js";
+import accountingRoutes from "./routes/accountingRoutes.js";
 
 
 
@@ -49,6 +50,7 @@ app.use("/api/pins", pinRoutes);
 app.use("/api/assignments",    subjectAssignmentRoutes);
 app.use("/api/subject-results", subjectResultRoutes);
 app.use("/api/class-config",   classSubjectConfigRoutes);
+app.use("/api/accounting", accountingRoutes);
 
 
 
