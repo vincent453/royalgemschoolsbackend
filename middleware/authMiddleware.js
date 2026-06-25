@@ -150,6 +150,48 @@ export const protectAdminOrUser = async (req, res, next) => {
   }
 };
 
+// Support either portal student/parent token or staff/admin route token.
+export const protectStudentOrPortal = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Not authorized, no token provided" });
+  }
+
+  try {
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    if (decoded.studentId) {
+      req.studentId = decoded.studentId;
+      req.portalRole = decoded.role;
+      return next();
+    }
+
+    const admin = await Admin.findById(decoded.id).select("-password");
+    if (admin) {
+      req.admin = admin;
+      req.isSuperAdmin = true;
+      return next();
+    }
+
+    const user = await User.findById(decoded.id).select("-password");
+    if (user) {
+      if (!user.isActive) {
+        return res.status(403).json({ message: "Account is deactivated. Please contact admin." });
+      }
+      req.user = user;
+      return next();
+    }
+
+    return res.status(401).json({ message: "Not authorized, account not found" });
+  } catch (error) {
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Token expired, please login again" });
+    }
+    return res.status(401).json({ message: "Not authorized, token failed" });
+  }
+};
+
 // Alias
 export const protectAdmin = protect;
 export const adminOnly = (req, res, next) => {

@@ -121,6 +121,27 @@ export const getStudents = async (req, res) => {
   }
 };
 
+// @desc Get student by id
+// @route GET /api/students/:id
+export const getStudentById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (req.studentId && String(req.studentId) !== String(id)) {
+      return res.status(403).json({ message: "Access denied." });
+    }
+
+    const student = await Student.findById(id);
+    if (!student) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    res.status(200).json(student);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // @desc Delete student
 // @route DELETE /api/students/:id
 export const deleteStudent = async (req, res) => {

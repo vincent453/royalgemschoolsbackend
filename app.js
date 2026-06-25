@@ -30,13 +30,16 @@ import accountingRoutes from "./routes/accountingRoutes.js";
 const app = express();
 
 // Middleware
-app.use(express.json());
+app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 app.use(morgan("dev"));
 
 // Connect to MongoDB (cached for serverless — safe to call on every request)
 await connectDB();
+
+// Webhook support for raw Paystack payloads
+app.use("/api/fees/paystack/webhook", express.raw({ type: "application/json" }));
 
 // API Routes
 app.use("/api/blog", blogRoutes);
@@ -51,6 +54,7 @@ app.use("/api/assignments",    subjectAssignmentRoutes);
 app.use("/api/subject-results", subjectResultRoutes);
 app.use("/api/class-config",   classSubjectConfigRoutes);
 app.use("/api/accounting", accountingRoutes);
+app.use("/api/fees", feeRoutes);
 
 
 
