@@ -2,7 +2,7 @@ import express from "express";
 import {
   addIncome, editIncome, deleteIncome, listIncome,
   addExpense, editExpense, deleteExpense, listExpenses,
-  dashboardSummary,
+  dashboardSummary, getLedger,
 } from "../controllers/accountingController.js";
 import { validateIncome, validateExpense } from "../middleware/accountingValidator.js";
 
@@ -43,5 +43,8 @@ router.delete("/expenses/:id", deleteExpense);
 
 // Dashboard summary
 router.get("/summary", dashboardSummary);
+
+// Ledger
+router.get("/ledger", getLedger);
 
 export default router;
