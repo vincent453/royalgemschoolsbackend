@@ -49,7 +49,7 @@ export const uploadSubjectResult = async (req, res) => {
       req.user?.assignedClass,
     ]
       .filter(Boolean)
-      .map((c) => normalize(c));
+      .map((c) => normalizeString(c));
 
     const profileMatch =
       profileSubjects.includes(normalizedSubject) &&
@@ -71,9 +71,6 @@ export const uploadSubjectResult = async (req, res) => {
 
     const total = scores.cwk + scores.hwk + scores.ca1 + scores.ca2 + scores.exam;
     const { grade, remark } = gradeAndRemark(total);
-
-    const normalizedSubject = normalizeString(subject);
-    const normalizedClass   = normalizeString(classLevel);
 
     const result = await SubjectResult.findOneAndUpdate(
       { student: studentId, term, session, normalizedSubject, normalizedClass },
