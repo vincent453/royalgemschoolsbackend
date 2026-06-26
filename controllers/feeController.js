@@ -2,6 +2,7 @@ import crypto from "crypto";
 import FeeStatement from "../models/feeStatementModel.js";
 import FeePayment from "../models/feePaymentModel.js";
 import Student from "../models/studentModel.js";
+import Income  from "../models/incomeModel.js";
 
 const buildReference = () => {
   return `FEE-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
@@ -181,7 +182,7 @@ export const initializePaystackPayment = async (req, res) => {
       amount:   amountInKobo,
       currency: "NGN",
       reference,
-      callback_url: `http://localhost:5173/portal/fees?status=success`,
+      callback_url: `${process.env.FRONTEND_URL}/portal/fees?status=success`,
       metadata: {
         feeStatementId: statement._id.toString(),
         studentId:      statement.student._id.toString(),
@@ -271,6 +272,27 @@ export const handlePaystackWebhook = async (req, res) => {
           statement.status     = statusInfo.status;
           await statement.save();
           console.log(`✅ Fee ${statement._id} updated to "${statement.status}" after webhook`);
+
+          // ── Auto-create Income record ──────────────────────────────
+          // Avoid duplicates — check if an income record already exists
+          // for this payment reference before creating a new one
+          const existingIncome = await Income.findOne({ reference });
+          if (!existingIncome) {
+            await Income.create({
+              title:       `School Fees — ${statement.term} ${statement.session}`,
+              amount:      paidAmount,
+              category:    "School Fees",
+              source:      "Paystack",
+              student:     statement.student,
+              date:        new Date(),
+              session:     statement.session,
+              term:        statement.term,
+              description: `Auto-recorded from Paystack payment. Fee Ref: ${statement.reference}`,
+              reference,
+              recordedBy:  statement.createdBy, // the admin who created the fee statement
+            });
+            console.log(`💰 Income auto-created for fee ${statement._id}`);
+          }
         }
       }
     }
