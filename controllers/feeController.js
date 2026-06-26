@@ -211,16 +211,17 @@ export const initializePaystackPayment = async (req, res) => {
     const email = statement.student.parentEmail || "no-reply@royalgem.edu.ng";
     const reference = buildReference();
 
-    const payload = {
-      email,
-      amount: amountInKobo,
-      currency: "NGN",
-      reference,
-      metadata: {
-        feeStatementId: statement._id.toString(),
-        studentId: statement.student._id.toString(),
-      },
-    };
+  const payload = {
+  email,
+  amount: amountInKobo,
+  currency: "NGN",
+  reference,
+  callback_url: "https://royalgemschools.vercel.app/portal/payment-success",
+  metadata: {
+    feeStatementId: statement._id.toString(),
+    studentId: statement.student._id.toString(),
+  },
+};
 
     const response = await fetch("https://api.paystack.co/transaction/initialize", {
       method: "POST",
