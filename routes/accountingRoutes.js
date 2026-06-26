@@ -2,14 +2,13 @@ import express from "express";
 import {
   addIncome, editIncome, deleteIncome, listIncome,
   addExpense, editExpense, deleteExpense, listExpenses,
-  dashboardSummary, getLedger,
+  dashboardSummary,
 } from "../controllers/accountingController.js";
-import { validateIncome, validateExpense } from "../middleware/accountingValidator.js";
 
 const router = express.Router();
 
 // Income
-router.post("/incomes", validateIncome, addIncome);
+router.post("/incomes", addIncome);
 router.get("/incomes", listIncome);
 router.get("/incomes/:id", async (req, res) => {
   // simple fetch
@@ -22,11 +21,11 @@ router.get("/incomes/:id", async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
-router.put("/incomes/:id", validateIncome, editIncome);
+router.put("/incomes/:id", editIncome);
 router.delete("/incomes/:id", deleteIncome);
 
 // Expense
-router.post("/expenses", validateExpense, addExpense);
+router.post("/expenses", addExpense);
 router.get("/expenses", listExpenses);
 router.get("/expenses/:id", async (req, res) => {
   try {
@@ -38,13 +37,10 @@ router.get("/expenses/:id", async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
-router.put("/expenses/:id", validateExpense, editExpense);
+router.put("/expenses/:id", editExpense);
 router.delete("/expenses/:id", deleteExpense);
 
 // Dashboard summary
 router.get("/summary", dashboardSummary);
-
-// Ledger
-router.get("/ledger", getLedger);
 
 export default router;
