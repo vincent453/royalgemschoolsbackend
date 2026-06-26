@@ -27,6 +27,9 @@ import feeRoutes from "./routes/feeRoutes.js";
 
 
 
+// Webhook support for raw Paystack payloads
+app.use("/api/fees/paystack/webhook", express.raw({ type: "application/json" }));
+
 
 
 const app = express();
@@ -39,9 +42,6 @@ app.use(morgan("dev"));
 
 // Connect to MongoDB (cached for serverless — safe to call on every request)
 await connectDB();
-
-// Webhook support for raw Paystack payloads
-app.use("/api/fees/paystack/webhook", express.raw({ type: "application/json" }));
 
 // API Routes
 app.use("/api/blog", blogRoutes);
