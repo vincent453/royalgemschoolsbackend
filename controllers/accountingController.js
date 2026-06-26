@@ -104,7 +104,7 @@ export const listExpenses = async (req, res) => {
 export const dashboardSummary = async (req, res) => {
   try {
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const matchAll = {};
 
     const [incomeAgg] = await Income.aggregate([
@@ -142,63 +142,9 @@ export const dashboardSummary = async (req, res) => {
   }
 };
 
-export const getLedger = async (req, res) => {
-  try {
-    const q = parseQuery(req.query);
-
-    const [incomes, expenses] = await Promise.all([
-      Income.find(q).lean().sort({ date: 1, createdAt: 1 }),
-      Expense.find(q).lean().sort({ date: 1, createdAt: 1 }),
-    ]);
-
-    const entries = [
-      ...incomes.map((item) => ({
-        ...item,
-        type: "Income",
-        description: item.description || "Income received",
-        label: item.source || item.category || "Income",
-      })),
-      ...expenses.map((item) => ({
-        ...item,
-        type: "Expense",
-        description: item.description || "Expense paid",
-        label: item.vendor || item.category || "Expense",
-      })),
-    ]
-      .sort((a, b) => new Date(a.date) - new Date(b.date))
-      .map((item) => ({
-        ...item,
-        amount: Number(item.amount || 0),
-      }));
-
-    let runningBalance = 0;
-    const ledgerEntries = entries.map((item) => {
-      runningBalance += item.type === "Income" ? item.amount : -item.amount;
-      return {
-        ...item,
-        runningBalance,
-      };
-    });
-
-    const totalIncome = ledgerEntries.reduce((sum, entry) => sum + (entry.type === "Income" ? entry.amount : 0), 0);
-    const totalExpenses = ledgerEntries.reduce((sum, entry) => sum + (entry.type === "Expense" ? entry.amount : 0), 0);
-
-    res.json({
-      entries: ledgerEntries.reverse(),
-      totals: {
-        totalIncome,
-        totalExpenses,
-        netBalance: totalIncome - totalExpenses,
-      },
-    });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
 // Export for tests if needed
 export default {
   addIncome, editIncome, deleteIncome, listIncome,
   addExpense, editExpense, deleteExpense, listExpenses,
-  dashboardSummary, getLedger,
+  dashboardSummary,
 };
