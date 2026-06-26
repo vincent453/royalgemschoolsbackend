@@ -27,12 +27,13 @@ import feeRoutes from "./routes/feeRoutes.js";
 
 
 
+
+
+const app = express();
 // Webhook support for raw Paystack payloads
 app.use("/api/fees/paystack/webhook", express.raw({ type: "application/json" }));
 
 
-
-const app = express();
 
 // Middleware
 app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
