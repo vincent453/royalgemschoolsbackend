@@ -104,7 +104,7 @@ export const listExpenses = async (req, res) => {
 export const dashboardSummary = async (req, res) => {
   try {
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 0);
     const matchAll = {};
 
     const [incomeAgg] = await Income.aggregate([
