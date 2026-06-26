@@ -216,7 +216,7 @@ export const initializePaystackPayment = async (req, res) => {
   amount: amountInKobo,
   currency: "NGN",
   reference,
-  callback_url: "https://royalgemschools.vercel.app/portal/payment-success",
+  callback_url: "https://rroyalgemschoolsbackend.vercel.app/portal/payment-success",
   metadata: {
     feeStatementId: statement._id.toString(),
     studentId: statement.student._id.toString(),
