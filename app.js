@@ -23,6 +23,8 @@ import subjectAssignmentRoutes  from "./routes/subjectAssignmentRoutes.js";
 import subjectResultRoutes      from "./routes/subjectResultRoutes.js";
 import classSubjectConfigRoutes from "./routes/classSubjectConfigRoutes.js";
 import accountingRoutes from "./routes/accountingRoutes.js";
+import feeRoutes from "./routes/feeRoutes.js";
+
 
 
 
