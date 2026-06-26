@@ -181,7 +181,7 @@ export const initializePaystackPayment = async (req, res) => {
       amount:   amountInKobo,
       currency: "NGN",
       reference,
-      callback_url: `${process.env.FRONTEND_URL}/portal/fees?status=success`,
+      callback_url: `http://localhost:5173/portal/fees?status=success`,
       metadata: {
         feeStatementId: statement._id.toString(),
         studentId:      statement.student._id.toString(),
