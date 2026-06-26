@@ -17,16 +17,27 @@ import { protectPortal } from "../middleware/portalMiddleware.js";
 
 const router = express.Router();
 
-// Admin billing management
-router.post("/", protectStaffAdmin, createFeeStatement);
-router.get("/", protectStaffAdmin, getFeeStatements);
-router.get("/me/all", protectPortal, getMyFeeStatements);
-router.post("/paystack/initialize", protectPortal, initializePaystackPayment);
-router.get("/:id", protectStudentOrPortal, getFeeStatementById);
-router.put("/:id", protectStaffAdmin, updateFeeStatement);
-router.delete("/:id", protectStaffAdmin, deleteFeeStatement);
+// ── WEBHOOK — must be FIRST before /:id catches it ───────────
+// Raw body required for Paystack signature verification
+router.post(
+  "/paystack/webhook",
+  express.raw({ type: "application/json" }),
+  handlePaystackWebhook
+);
 
-// Paystack webhook
-router.post("/paystack/webhook", handlePaystackWebhook);
+// ── PAYMENT INITIALIZE ────────────────────────────────────────
+router.post("/paystack/initialize", protectPortal, initializePaystackPayment);
+
+// ── STUDENT / PARENT ──────────────────────────────────────────
+router.get("/me/all", protectPortal, getMyFeeStatements);
+
+// ── ADMIN ─────────────────────────────────────────────────────
+router.post("/", protectStaffAdmin, createFeeStatement);
+router.get("/",  protectStaffAdmin, getFeeStatements);
+
+// ── SINGLE RECORD — keep :id routes LAST ─────────────────────
+router.get("/:id",    protectStudentOrPortal, getFeeStatementById);
+router.put("/:id",    protectStaffAdmin,       updateFeeStatement);
+router.delete("/:id", protectStaffAdmin,       deleteFeeStatement);
 
 export default router;

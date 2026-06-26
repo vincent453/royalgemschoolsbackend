@@ -9,62 +9,63 @@ import cors from "cors";
 import morgan from "morgan";
 
 // Import API routes
-import adminViewRoutes from "./routes/adminViewRoute.js";
-import userRoutes from "./routes/userRoutes.js";
-import connectDB from "./config/db.js";
-import studentRoutes from "./routes/studentRoutes.js";
-import resultRoutes from "./routes/resultRoutes.js";
-import settingsRoutes from "./routes/sethingRoutes.js";
-import yearbookRoutes from "./routes/yearBook.js";
-import authRoutes from "./routes/authRoutes.js";
-import pinRoutes from "./routes/pinRoutes.js";
-import blogRoutes from "./routes/blogRoutes.js"
+import adminViewRoutes          from "./routes/adminViewRoute.js";
+import userRoutes               from "./routes/userRoutes.js";
+import connectDB                from "./config/db.js";
+import studentRoutes            from "./routes/studentRoutes.js";
+import resultRoutes             from "./routes/resultRoutes.js";
+import settingsRoutes           from "./routes/sethingRoutes.js";
+import yearbookRoutes           from "./routes/yearBook.js";
+import authRoutes               from "./routes/authRoutes.js";
+import pinRoutes                from "./routes/pinRoutes.js";
+import blogRoutes               from "./routes/blogRoutes.js";
 import subjectAssignmentRoutes  from "./routes/subjectAssignmentRoutes.js";
 import subjectResultRoutes      from "./routes/subjectResultRoutes.js";
 import classSubjectConfigRoutes from "./routes/classSubjectConfigRoutes.js";
-import accountingRoutes from "./routes/accountingRoutes.js";
-import feeRoutes from "./routes/feeRoutes.js";
-
-
-
-
+import accountingRoutes         from "./routes/accountingRoutes.js";
+import feeRoutes                from "./routes/feeRoutes.js";
 
 const app = express();
-// Webhook support for raw Paystack payloads
-app.use("/api/fees/paystack/webhook", express.raw({ type: "application/json" }));
 
+// ── Webhook raw body — MUST be before express.json() ─────────
+// Only this path gets the raw buffer; everything else gets JSON
+app.use(
+  "/api/fees/paystack/webhook",
+  express.raw({ type: "application/json" })
+);
 
-
-// Middleware
-app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
+// ── Global middleware ─────────────────────────────────────────
+// Skip JSON parsing on the webhook path so raw body is preserved
+app.use((req, res, next) => {
+  if (req.path === "/api/fees/paystack/webhook") return next();
+  express.json({ verify: (req, res, buf) => { req.rawBody = buf; } })(req, res, next);
+});
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 app.use(morgan("dev"));
 
-// Connect to MongoDB (cached for serverless — safe to call on every request)
+// ── Database ──────────────────────────────────────────────────
 await connectDB();
 
-// API Routes
-app.use("/api/blog", blogRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/students", studentRoutes);
-app.use("/api/results", resultRoutes);
-app.use("/api/settings", settingsRoutes);
-app.use("/api/yearbook", yearbookRoutes);
-app.use("/api/auth", authRoutes);
-app.use("/api/pins", pinRoutes);
-app.use("/api/assignments",    subjectAssignmentRoutes);
+// ── API Routes ────────────────────────────────────────────────
+app.use("/api/blog",            blogRoutes);
+app.use("/api/users",           userRoutes);
+app.use("/api/students",        studentRoutes);
+app.use("/api/results",         resultRoutes);
+app.use("/api/settings",        settingsRoutes);
+app.use("/api/yearbook",        yearbookRoutes);
+app.use("/api/auth",            authRoutes);
+app.use("/api/pins",            pinRoutes);
+app.use("/api/assignments",     subjectAssignmentRoutes);
 app.use("/api/subject-results", subjectResultRoutes);
-app.use("/api/class-config",   classSubjectConfigRoutes);
-app.use("/api/accounting", accountingRoutes);
-app.use("/api/fees", feeRoutes);
+app.use("/api/class-config",    classSubjectConfigRoutes);
+app.use("/api/accounting",      accountingRoutes);
+app.use("/api/fees",            feeRoutes);
 
-
-
-// VIEW Routes
+// ── View Routes ───────────────────────────────────────────────
 app.use("/api/admin", adminViewRoutes);
 
-// 404 handler
+// ── 404 handler ───────────────────────────────────────────────
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -72,10 +73,9 @@ app.use((req, res) => {
   });
 });
 
-// Error handler
+// ── Error handler ─────────────────────────────────────────────
 app.use((err, req, res, next) => {
   console.error(err.stack);
-
   res.status(err.status || 500).json({
     success: false,
     message: err.message || "Something went wrong!",
@@ -83,7 +83,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Only start listening when running locally (not on Vercel)
+// ── Local server (not on Render/Vercel) ──────────────────────
 if (process.env.NODE_ENV !== "production") {
   const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
