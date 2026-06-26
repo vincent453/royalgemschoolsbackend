@@ -104,8 +104,17 @@ export const listExpenses = async (req, res) => {
 export const dashboardSummary = async (req, res) => {
   try {
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const matchAll = {};
+const startOfMonth = new Date(
+  now.getUTCFullYear(),
+  now.getUTCMonth(),
+  1
+);
+
+const endOfMonth = new Date(
+  now.getUTCFullYear(),
+  now.getUTCMonth() + 1,
+  1
+);    const matchAll = {};
 
     const [incomeAgg] = await Income.aggregate([
       { $match: matchAll },
@@ -117,16 +126,39 @@ export const dashboardSummary = async (req, res) => {
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]);
 
-    const [incomeThisMonth] = await Income.aggregate([
-      { $match: { date: { $gte: startOfMonth } } },
-      { $group: { _id: null, total: { $sum: "$amount" } } },
-    ]);
+const [incomeThisMonth] = await Income.aggregate([
+  {
+    $match: {
+      date: {
+        $gte: startOfMonth,
+        $lt: endOfMonth,
+      },
+    },
+  },
+  {
+    $group: {
+      _id: null,
+      total: { $sum: "$amount" },
+    },
+  },
+]);
 
-    const [expenseThisMonth] = await Expense.aggregate([
-      { $match: { date: { $gte: startOfMonth } } },
-      { $group: { _id: null, total: { $sum: "$amount" } } },
-    ]);
-
+const [expenseThisMonth] = await Expense.aggregate([
+  {
+    $match: {
+      date: {
+        $gte: startOfMonth,
+        $lt: endOfMonth,
+      },
+    },
+  },
+  {
+    $group: {
+      _id: null,
+      total: { $sum: "$amount" },
+    },
+  },
+]);
     const totalIncome = incomeAgg?.total || 0;
     const totalExpenses = expenseAgg?.total || 0;
 
