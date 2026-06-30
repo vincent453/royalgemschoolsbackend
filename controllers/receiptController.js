@@ -1,5 +1,5 @@
 // controllers/receiptController.js
-import Receipt from "../models/receiptModel.js";
+import Receipt from "../models/Receiptmodel.js";
 import { issueReceipt } from "../services/receiptService.js";
 import { buildReceiptPdf } from "../utils/receiptPdf.js";
 

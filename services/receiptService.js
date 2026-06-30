@@ -3,7 +3,7 @@
 // Receipts are NEVER created directly by a controller — always through here,
 // so the numbering scheme and required fields stay consistent everywhere.
 
-import Receipt from "../models/resultModel.js";
+import Receipt from "../models/Receiptmodel.js";
 import FeeStatement from "../models/feeStatementModel.js";
 
 // Receipt number format: RGS-YYYY-000001 (sequential per year)
