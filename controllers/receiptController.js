@@ -218,7 +218,8 @@ export const downloadReceiptPdf = async (req, res) => {
   try {
     const receipt = await Receipt.findById(req.params.id)
       .populate("student", "firstName lastName regNumber classLevel session")
-      .populate("issuedBy", "name");
+      .populate("issuedBy", "name")
+      .populate("feeStatement", "reference dueDate items amountDue");
 
     if (!receipt) return res.status(404).json({ message: "Receipt not found" });
 

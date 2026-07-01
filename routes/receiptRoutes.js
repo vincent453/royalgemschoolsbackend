@@ -24,6 +24,31 @@ router.get("/student/:studentId", protectStaffAdmin, getReceiptsByStudent);
 router.post("/manual", protectStaffAdmin, recordManualPayment);
 router.get("/", protectStaffAdmin, getAllReceipts);
 
+// ── Receipt by Fee Statement ID (for portal users viewing receipts) ─
+router.get("/byFeeStatement/:feeStatementId", protectPortal, async (req, res) => {
+  try {
+    const { feeStatementId } = req.params;
+    const receipt = await (await import("../models/Receiptmodel.js")).default
+      .findOne({ feeStatement: feeStatementId })
+      .populate("student", "firstName lastName regNumber classLevel session parentEmail")
+      .populate("issuedBy", "name")
+      .populate("feeStatement", "reference dueDate items amountDue");
+
+    if (!receipt) {
+      return res.status(404).json({ message: "Receipt not found for this fee statement" });
+    }
+
+    // Verify student has access
+    if (String(receipt.student._id) !== String(req.studentId)) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    res.json(receipt);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // ── Shared (admin OR portal — access control inside controller) ─
 // Accepts either an admin/staff token or a portal token.
 const protectAdminOrPortal = async (req, res, next) => {
