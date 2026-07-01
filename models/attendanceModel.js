@@ -49,12 +49,10 @@ const attendanceSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    // ─── Indexing for performance ────────────────────────
-    // Ensures one record per student per day
-    __v: false,
   },
   {
     timestamps: true,
+    versionKey: false,
   }
 );
 
