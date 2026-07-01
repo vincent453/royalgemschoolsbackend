@@ -30,18 +30,8 @@ import receiptRoutes from "./routes/receiptRoutes.js";
 const app = express();
 
 // ── Webhook raw body — MUST be before express.json() ─────────
-// Only this path gets the raw buffer; everything else gets JSON
-app.use(
-  "/api/fees/paystack/webhook",
-  express.raw({ type: "application/json" })
-);
-
-// ── Global middleware ─────────────────────────────────────────
-// Skip JSON parsing on the webhook path so raw body is preserved
-app.use((req, res, next) => {
-  if (req.path === "/api/fees/paystack/webhook") return next();
-  express.json({ verify: (req, res, buf) => { req.rawBody = buf; } })(req, res, next);
-});
+// Webhook gets raw body via route-level middleware
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 app.use(morgan("dev"));

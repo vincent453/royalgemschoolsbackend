@@ -268,17 +268,19 @@ export const handlePaystackWebhook = async (req, res) => {
   try {
     const signature = req.headers["x-paystack-signature"];
     const secret = process.env.PAYSTACK_SECRET_KEY;
-    const payload = req.rawBody || Buffer.from(JSON.stringify(req.body));
+    // When using express.raw() at route level, req.body is already a Buffer
+    const payload = req.body instanceof Buffer ? req.body : Buffer.from(JSON.stringify(req.body));
     const hash = crypto.createHmac("sha512", secret).update(payload).digest("hex");
 
     if (!signature || signature !== hash) {
       return res.status(401).json({ message: "Invalid Paystack signature." });
     }
 
-    const event = req.body;
+    // Parse the JSON from the buffer
+    const event = JSON.parse(payload.toString());
     if (event.event === "charge.success") {
       const { reference, amount, status, gateway_response } = event.data;
-      const payment = await FeePayment.findOne({ reference });
+      const payment = await FeePayment.findOne({ paystackReference: reference });
       if (payment && payment.status !== "success") {
         payment.status = status === "success" ? "success" : "failed";
         payment.transactionId = event.data.id?.toString();
