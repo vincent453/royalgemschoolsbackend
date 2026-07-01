@@ -24,7 +24,8 @@ import subjectResultRoutes      from "./routes/subjectResultRoutes.js";
 import classSubjectConfigRoutes from "./routes/classSubjectConfigRoutes.js";
 import accountingRoutes         from "./routes/accountingRoutes.js";
 import feeRoutes                from "./routes/feeRoutes.js";
-import receiptRoutes from "./routes/receiptRoutes.js";
+import receiptRoutes            from "./routes/receiptRoutes.js";
+import attendanceRoutes         from "./routes/attendanceRoutes.js";
 
 
 const app = express();
@@ -53,7 +54,8 @@ app.use("/api/subject-results", subjectResultRoutes);
 app.use("/api/class-config",    classSubjectConfigRoutes);
 app.use("/api/accounting",      accountingRoutes);
 app.use("/api/fees",            feeRoutes);
-app.use("/api/receipts", receiptRoutes);
+app.use("/api/receipts",        receiptRoutes);
+app.use("/api/attendance",      attendanceRoutes);
 
 // ── View Routes ───────────────────────────────────────────────
 app.use("/api/admin", adminViewRoutes);
