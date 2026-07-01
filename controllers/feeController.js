@@ -266,62 +266,113 @@ export const initializePaystackPayment = async (req, res) => {
 
 export const handlePaystackWebhook = async (req, res) => {
   try {
+    console.log("[WEBHOOK] Received Paystack webhook");
+    
     const signature = req.headers["x-paystack-signature"];
     const secret = process.env.PAYSTACK_SECRET_KEY;
-    // When using express.raw() at route level, req.body is already a Buffer
     const payload = req.body instanceof Buffer ? req.body : Buffer.from(JSON.stringify(req.body));
+    
+    console.log("[WEBHOOK] Payload type:", typeof req.body, "instanceof Buffer:", req.body instanceof Buffer);
+    
     const hash = crypto.createHmac("sha512", secret).update(payload).digest("hex");
 
     if (!signature || signature !== hash) {
+      console.warn("[WEBHOOK] Invalid signature. Expected:", hash, "Got:", signature);
       return res.status(401).json({ message: "Invalid Paystack signature." });
     }
 
-    // Parse the JSON from the buffer
     const event = JSON.parse(payload.toString());
+    console.log("[WEBHOOK] Event type:", event.event);
+    console.log("[WEBHOOK] Event data:", JSON.stringify(event.data, null, 2));
+    
     if (event.event === "charge.success") {
       const { reference, amount, status, gateway_response } = event.data;
+      console.log("[WEBHOOK] Processing charge.success - reference:", reference, "amount:", amount);
+      
       const payment = await FeePayment.findOne({ paystackReference: reference });
-      if (payment && payment.status !== "success") {
-        payment.status = status === "success" ? "success" : "failed";
+      console.log("[WEBHOOK] Payment found:", !!payment, "ID:", payment?._id);
+      
+      if (!payment) {
+        console.warn("[WEBHOOK] Payment not found for reference:", reference);
+        return res.json({ status: true }); // Still return success to Paystack
+      }
+
+      if (payment.status === "success") {
+        console.log("[WEBHOOK] Payment already processed, skipping");
+        return res.json({ status: true }); // Idempotent
+      }
+
+      try {
+        // Update payment status
+        console.log("[WEBHOOK] Updating payment from status:", payment.status, "to: success");
+        payment.status = "success";
         payment.transactionId = event.data.id?.toString();
         payment.gatewayResponse = gateway_response || "";
         payment.paidAt = new Date();
         await payment.save();
+        console.log("[WEBHOOK] Payment saved successfully");
 
+        // Update fee statement
         const statement = await FeeStatement.findById(payment.feeStatement);
+        console.log("[WEBHOOK] Statement found:", !!statement);
+        
         if (statement) {
           const paidAmount = Number(amount) / 100;
+          console.log("[WEBHOOK] Paid amount (kobo to naira):", paidAmount);
+          console.log("[WEBHOOK] Previous amountPaid:", statement.amountPaid);
+          
           statement.amountPaid = Math.max(0, (statement.amountPaid || 0) + paidAmount);
+          console.log("[WEBHOOK] New amountPaid:", statement.amountPaid);
+          
           const statusInfo = buildStatus(statement.amountDue, statement.amountPaid);
           statement.balance = statusInfo.balance;
           statement.status = statusInfo.status;
+          console.log("[WEBHOOK] New statement status:", statement.status, "balance:", statement.balance);
+          
           await statement.save();
-
-          // Automatically issue a receipt for this successful Paystack payment.
-          // Receipts are never created manually — only through this service.
-          try {
-            await issueReceipt({
-              feeStatementId:   statement._id,
-              paymentId:        payment._id,
-              amount:           paidAmount,
-              paymentMethod:    "paystack",
-              paymentReference: payment.paystackReference || reference,
-              paymentGateway:   "paystack",
-              description:      `Online payment via Paystack for ${statement.term} ${statement.session}`,
-              issuedBy:         null,
-            });
-          } catch (receiptErr) {
-            // Don't fail the webhook if receipt generation has an issue —
-            // payment is already recorded; log for manual follow-up.
-            console.error("Failed to auto-issue receipt:", receiptErr.message);
-          }
+          console.log("[WEBHOOK] Statement saved successfully");
+        } else {
+          console.warn("[WEBHOOK] No statement found for payment");
         }
+      } catch (updateErr) {
+        console.error("[WEBHOOK] Error updating payment/statement:", updateErr.message);
+        console.error("[WEBHOOK] Error details:", updateErr);
+        throw updateErr; // Re-throw to fail the webhook if core payment update fails
       }
+
+      // Issue receipt in background (non-blocking)
+      // Can be disabled via DISABLE_AUTO_RECEIPT=true to debug payment issues
+      if (process.env.DISABLE_AUTO_RECEIPT !== "true") {
+        try {
+          console.log("[WEBHOOK] Issuing receipt (non-blocking)...");
+          issueReceipt({
+            feeStatementId:   payment.feeStatement,
+            paymentId:        payment._id,
+            amount:           Number(amount) / 100,
+            paymentMethod:    "paystack",
+            paymentReference: payment.paystackReference || reference,
+            paymentGateway:   "paystack",
+            description:      `Online payment via Paystack`,
+            issuedBy:         null,
+          }).then(() => {
+            console.log("[WEBHOOK] Receipt created successfully");
+          }).catch(receiptErr => {
+            console.error("[WEBHOOK] Failed to create receipt:", receiptErr.message);
+          });
+        } catch (err) {
+          console.error("[WEBHOOK] Error queueing receipt:", err.message);
+        }
+      } else {
+        console.log("[WEBHOOK] Receipt auto-generation disabled (DISABLE_AUTO_RECEIPT=true)");
+      }
+    } else {
+      console.log("[WEBHOOK] Ignoring event type:", event.event);
     }
 
     return res.json({ status: true });
   } catch (err) {
-    console.error(err);
+    console.error("[WEBHOOK] Critical error:", err);
+    console.error("[WEBHOOK] Stack trace:", err.stack);
     return res.status(500).json({ message: err.message });
   }
 };
