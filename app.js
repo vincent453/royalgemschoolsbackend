@@ -24,7 +24,19 @@ import subjectResultRoutes      from "./routes/subjectResultRoutes.js";
 import classSubjectConfigRoutes from "./routes/classSubjectConfigRoutes.js";
 import accountingRoutes         from "./routes/accountingRoutes.js";
 import feeRoutes                from "./routes/feeRoutes.js";
-import receiptRoutes            from "./routes/receiptRoutes.js";
+import receiptRoutes            from "./routes/receiptRoutes.js";fetch('https://royalgemschoolsbackend.vercel.app/api/attendance/pending/JSS1?date=2026-07-01', {
+  headers: { 'Authorization': 'Bearer YOUR_TOKEN' }
+})
+.then(r => {
+  console.log('Status:', r.status);
+  return r.json();
+})
+.then(d => {
+  console.log('Response:', d);
+  console.log('Student Count:', d.count);
+  console.log('Students:', d.pending);
+})
+.catch(e => console.error('Error:', e))
 import attendanceRoutes         from "./routes/attendanceRoutes.js";
 
 

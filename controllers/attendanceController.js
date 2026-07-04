@@ -384,3 +384,13 @@ export const generateAttendanceReport = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+// export const getAttendenceHistory = async (req, res) => {
+//   try {
+//     const { studentId } = req.params;
+//     const { term, session } = req.query;
+
+//     const result = await getStudentAttendanceHistory(studentId, term, session);
+
+//     res.json(result);
+//   }
