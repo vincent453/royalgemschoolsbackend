@@ -1,6 +1,3 @@
-EOFILE
-
-cat > /home/claude/inventory/stockMovementModel.js << 'EOFILE'
 import mongoose from "mongoose";
 
 const stockMovementSchema = new mongoose.Schema(
