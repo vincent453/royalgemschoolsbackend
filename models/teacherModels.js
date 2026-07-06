@@ -14,7 +14,9 @@ const teacherSchema = new mongoose.Schema({
   subjects:    [{ type: String }],
   classes:     [{ 
     type: String, 
-    enum: ["JSS 1", "JSS 2", "JSS 3", "SSS 1", "SSS 2", "SSS 3"] 
+    enum: ["Reception 1", "Reception 2","Pre-K", "Kindergarten", "Primary 1", "Primary 2", "Primary 3", "Primary 4", "Primary 5", "Primary 6", "JSS 1", "JSS 2", "JSS 3", "SSS 1", "SSS 2", "SSS 3"] 
+
+
   }],
   education: [{
     university: { type: String },
