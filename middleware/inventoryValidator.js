@@ -45,4 +45,4 @@ export const validateInventory = (req, res, next) => {
   }
 
   next();
-};I
+};
