@@ -56,20 +56,24 @@ const inventorySchema = new mongoose.Schema(
 
 // Auto-generate itemCode before save
 inventorySchema.pre("save", async function (next) {
-  if (!this.itemCode) {
-    this.itemCode = await buildItemCode();
-  }
-  // Auto-compute status
-  if (this.quantity <= 0) {
-    this.status = "Out of Stock";
-  } else if (this.quantity <= this.minimumStock) {
-    this.status = "Low Stock";
-  } else {
-    this.status = "In Stock";
-  }
-  next();
-});
+  try {
+    if (!this.itemCode) {
+      this.itemCode = await buildItemCode();
+    }
 
+    if (this.quantity <= 0) {
+      this.status = "Out of Stock";
+    } else if (this.quantity <= this.minimumStock) {
+      this.status = "Low Stock";
+    } else {
+      this.status = "In Stock";
+    }
+
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
 // Also compute status on findOneAndUpdate
 inventorySchema.pre("findOneAndUpdate", function (next) {
   const update = this.getUpdate();
