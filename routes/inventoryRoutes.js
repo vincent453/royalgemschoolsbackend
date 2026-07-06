@@ -7,6 +7,7 @@ import {
   recordPurchase, getPurchases,
   getInventoryReport, getLowStock, getOutOfStock,
 } from "../controllers/inventoryController.js";
+import { validateInventory } from "../middleware/inventoryValidator.js";
 
 const router = express.Router();
 
@@ -29,7 +30,12 @@ router.post("/purchase", recordPurchase);
 
 // ── CRUD ─────────────────────────────────────────────────────
 router.get("/",       getAllInventory);
-router.post("/",      protectStaffAdmin, createInventoryItem);
+router.post(
+  "/",
+  protectStaffAdmin,
+  validateInventory,
+  createInventoryItem
+);
 router.get("/:id",    getInventoryById);
 router.put("/:id",    protectStaffAdmin, updateInventoryItem);
 router.delete("/:id", protect, deleteInventoryItem);
