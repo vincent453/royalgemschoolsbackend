@@ -28,6 +28,8 @@ import receiptRoutes            from "./routes/receiptRoutes.js";
 import attendanceRoutes         from "./routes/attendanceRoutes.js";
 import supplierRoutes           from "./routes/suppliersRoutes.js";
 import inventoryRoutes          from "./routes/inventoryRoutes.js";
+import shopRoutes               from "./routes/ShopRoutes.js";
+import orderRoutes              from "./routes/orderRoutes.js";
 
 
 
@@ -61,6 +63,8 @@ app.use("/api/receipts",        receiptRoutes);
 app.use("/api/attendance",      attendanceRoutes);
 app.use("/api/suppliers",       supplierRoutes);
 app.use("/api/inventory",       inventoryRoutes);
+app.use("/api/shop",            shopRoutes);
+app.use("/api/orders",          orderRoutes);
 
 // ── View Routes ───────────────────────────────────────────────
 app.use("/api/admin", adminViewRoutes);
