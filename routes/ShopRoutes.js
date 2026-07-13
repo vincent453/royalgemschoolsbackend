@@ -6,12 +6,12 @@ import {
   getShopDashboard, getCategories, createCategory, updateCategory, deleteCategory,
   getProducts, getProduct, createProduct, updateProduct, deleteProduct,
   getPublicProducts, getSalesReport,
-} from "../controllers/shopController.js";
+} from "../controllers/Shopcontroller.js";
 import {
   getOrders, getOrder, updateOrderStatus,
   placeOrder, initializeShopPayment, shopWebhook,
   getMyOrders, getCustomers,
-} from "../controllers/orderController.js";
+} from "../controllers/OrderContoller.js";
 
 const router = express.Router();
 const upload = multer({
