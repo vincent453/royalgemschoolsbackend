@@ -254,37 +254,105 @@ export const getUserById = async (req, res) => {
   }
 };
 
+
 // @desc    Update user (Admin only)
 // @route   PUT /api/users/:id
 // @access  Private (Admin only)
 export const updateUser = async (req, res) => {
   try {
+    const {
+      name,
+      email,
+      role,
+      phoneNumber,
+      subject,
+      assignedClass,
+      assignedClasses,
+      isActive,
+      password,
+      student,
+    } = req.body;
+
     const user = await User.findById(req.params.id);
+
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({
+        message: "User not found",
+      });
     }
 
-    user.name = req.body.name || user.name;
-    user.email = req.body.email || user.email;
-    user.role = req.body.role || user.role;
-    user.phoneNumber = req.body.phoneNumber || user.phoneNumber;
-    user.isActive = req.body.isActive !== undefined ? req.body.isActive : user.isActive;
-    if (req.body.student) user.student = req.body.student;
+    // Prevent duplicate email
+    if (email && email !== user.email) {
+      const existingUser = await User.findOne({
+        email: email.toLowerCase(),
+        _id: { $ne: user._id },
+      });
+
+      if (existingUser) {
+        return res.status(400).json({
+          message: "Email is already in use",
+        });
+      }
+    }
+
+    // Update fields
+    if (name !== undefined) user.name = name.trim();
+
+    if (email !== undefined)
+      user.email = email.trim().toLowerCase();
+
+    if (role !== undefined) user.role = role;
+
+    if (phoneNumber !== undefined)
+      user.phoneNumber = phoneNumber.trim();
+
+    if (subject !== undefined)
+      user.subject = subject.trim();
+
+    if (assignedClass !== undefined)
+      user.assignedClass = assignedClass;
+
+    if (assignedClasses !== undefined)
+      user.assignedClasses = Array.isArray(assignedClasses)
+        ? assignedClasses
+        : [];
+
+    if (typeof isActive === "boolean")
+      user.isActive = isActive;
+
+    if (student !== undefined)
+      user.student = student;
+
+    // Update password if provided
+    if (password && password.trim() !== "") {
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(password.trim(), salt);
+    }
 
     const updatedUser = await user.save();
 
-    res.json({
+    res.status(200).json({
       message: "User updated successfully",
       user: {
         _id: updatedUser._id,
         name: updatedUser.name,
         email: updatedUser.email,
         role: updatedUser.role,
+        phoneNumber: updatedUser.phoneNumber,
+        subject: updatedUser.subject,
+        assignedClass: updatedUser.assignedClass,
+        assignedClasses: updatedUser.assignedClasses,
         isActive: updatedUser.isActive,
+        student: updatedUser.student,
       },
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Update User Error:", error);
+
+    res.status(500).json({
+      message: "Failed to update user",
+      error: error.message,
+    });
   }
 };
 
