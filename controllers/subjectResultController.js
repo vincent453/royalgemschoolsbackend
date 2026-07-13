@@ -54,8 +54,20 @@ const getPreviousTermAverage = async (studentId, term, session) => {
 // ─────────────────────────────────────────────────────────────
 export const uploadSubjectResult = async (req, res) => {
   try {
-    const { studentId, subject, classLevel, term, session, hwk, ca1, ca2, exam } = req.body;
-    const teacherId = req.user._id;
+const {
+  studentId,
+  subject,
+  classLevel,
+  term,
+  session,
+  hwk,
+  ca1,
+  ca2,
+  exam,
+  firstTermAverage,
+  secondTermAverage,
+} = req.body;    
+const teacherId = req.user._id;
 
     if (!TERM_FIELDS[term]) {
       return res.status(400).json({ message: `Invalid term: ${term}` });
@@ -103,16 +115,29 @@ if (
     const { grade, remark } = gradeAndRemark(total);
 
     // ── Carry-forward averages ──────────────────────────────
-    let firstTermAverage  = null;
-    let secondTermAverage = null;
+let firstAvg = null;
+let secondAvg = null;
 
-    if (term === "2nd Term") {
-      firstTermAverage = await getPreviousTermAverage(studentId, "1st Term", session);
-    }
-    if (term === "3rd Term") {
-      firstTermAverage  = await getPreviousTermAverage(studentId, "1st Term", session);
-      secondTermAverage = await getPreviousTermAverage(studentId, "2nd Term", session);
-    }
+if (term === "2nd Term") {
+  // Teacher enters 1st term average
+  firstAvg =
+    firstTermAverage !== undefined && firstTermAverage !== ""
+      ? Number(firstTermAverage)
+      : null;
+}
+
+if (term === "3rd Term") {
+  // Teacher enters both averages manually
+  firstAvg =
+    firstTermAverage !== undefined && firstTermAverage !== ""
+      ? Number(firstTermAverage)
+      : null;
+
+  secondAvg =
+    secondTermAverage !== undefined && secondTermAverage !== ""
+      ? Number(secondTermAverage)
+      : null;
+}
 
     const result = await SubjectResult.findOneAndUpdate(
       { student: studentId, subject, term, session },
@@ -124,8 +149,8 @@ if (
         teacher:    teacherId,
         classLevel,
         status:     "submitted",
-        firstTermAverage,
-        secondTermAverage,
+        firstTermAverage: firstAvg,
+        secondTermAverage: secondAvg,
       },
       { upsert: true, new: true }
     );
