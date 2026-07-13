@@ -1,5 +1,5 @@
 import crypto       from "crypto";
-import Order         from "../models/orderModel.js";
+import Order         from "../models/Ordermodel.js";
 import Product       from "../models/productModel.js";
 import Inventory     from "../models/inventoryModel.js";
 import StockMovement from "../models/stockMovementModel.js";
