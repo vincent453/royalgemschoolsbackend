@@ -1,7 +1,7 @@
 import express from "express";
 import multer  from "multer";
-import { protect, protectStaffAdmin } from "../../middleware/authMiddleware.js";
-import { protectPortal }              from "../../middleware/portalMiddleware.js";
+import { protect, protectStaffAdmin } from "../middleware/authMiddleware.js";
+import { protectPortal }              from "../middleware/portalMiddleware.js";
 import {
   getShopDashboard, getCategories, createCategory, updateCategory, deleteCategory,
   getProducts, getProduct, createProduct, updateProduct, deleteProduct,
