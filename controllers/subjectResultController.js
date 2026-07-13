@@ -62,20 +62,30 @@ export const uploadSubjectResult = async (req, res) => {
     }
 
     // Verify teacher assignment
-    const assignment = await SubjectAssignment.findOne({
-      teacher:     teacherId,
-      subject,
-      classLevels: classLevel,
-      session,
-      isActive:    true,
-    });
+const teacher = req.user;
 
-    if (!assignment && !req.isSuperAdmin) {
-      return res.status(403).json({
-        message: "You are not assigned to teach this subject in this class.",
-      });
-    }
+const teacherSubjects = (teacher.subject || "")
+  .split(",")
+  .map(s => s.trim().toUpperCase());
 
+const requestedSubject = subject.trim().toUpperCase();
+
+const assignedClasses = (teacher.assignedClasses || [])
+  .map(c => c.trim().toUpperCase());
+
+const requestedClass = classLevel.trim().toUpperCase();
+
+if (
+  !req.isSuperAdmin &&
+  (
+    !teacherSubjects.includes(requestedSubject) ||
+    !assignedClasses.includes(requestedClass)
+  )
+) {
+  return res.status(403).json({
+    message: "You are not assigned to teach this subject in this class.",
+  });
+}
     // Validate scores
     const scores = {
       hwk:  Number(hwk),
