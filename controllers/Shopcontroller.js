@@ -2,7 +2,7 @@ import { v2 as cloudinary } from "cloudinary";
 import Product         from "../models/productModel.js";
 import ProductCategory from "../models/Productcategorymodel.js";
 import Order           from "../models/Ordermodel.js";
-import Inventory       from "../../models/inventoryModel.js";
+import Inventory       from "../models/inventoryModel.js";
 
 const uploadToCloudinary = (buffer) => {
   cloudinary.config({
