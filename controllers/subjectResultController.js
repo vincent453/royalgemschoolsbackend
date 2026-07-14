@@ -11,23 +11,26 @@ const TERM_FIELDS = {
     { key: "hwk",  max: 10 },
     { key: "ca1",  max: 10 },
     { key: "ca2",  max: 10 },
+    { key: "cf",  max: 10 },
     { key: "exam", max: 60 },
   ],
   "2nd Term": [
     { key: "hwk",  max: 10 },
     { key: "ca1",  max: 10 },
     { key: "ca2",  max: 10 },
+    { key: "cf",  max: 10 },
     { key: "exam", max: 60 },
   ],
   "3rd Term": [
     { key: "hwk",  max: 10 },
     { key: "ca1",  max: 10 },
     { key: "ca2",  max: 10 },
+    { key: "cf",  max: 10 },
     { key: "exam", max: 60 },
   ],
 };
 
-const MAX_TOTAL = 90; // hwk(10) + ca1(10) + ca2(10) + exam(60)
+const MAX_TOTAL = 100; // hwk(10) + ca1(10) + ca2(10) + exam(60)
 
 const gradeAndRemark = (total) => {
   // Grade based on percentage out of 90
@@ -61,6 +64,7 @@ const {
   term,
   session,
   hwk,
+  cf,
   ca1,
   ca2,
   exam,
@@ -103,15 +107,17 @@ if (
       hwk:  Number(hwk),
       ca1:  Number(ca1),
       ca2:  Number(ca2),
+      cf:   Number(cf),
       exam: Number(exam),
     };
 
     if (scores.hwk  < 0 || scores.hwk  > 10) return res.status(400).json({ message: "HWK must be 0–10"  });
+    if (scores.cf  < 0 || scores.cf  > 10) return res.status(400).json({ message: "C.F must be 0–10"  });
     if (scores.ca1  < 0 || scores.ca1  > 10) return res.status(400).json({ message: "CA1 must be 0–10"  });
     if (scores.ca2  < 0 || scores.ca2  > 10) return res.status(400).json({ message: "CA2 must be 0–10"  });
     if (scores.exam < 0 || scores.exam > 60) return res.status(400).json({ message: "Exam must be 0–60" });
 
-    const total = scores.hwk + scores.ca1 + scores.ca2 + scores.exam;
+    const total = scores.hwk + scores.cf + scores.ca1 + scores.ca2 + scores.exam;
     const { grade, remark } = gradeAndRemark(total);
 
     // ── Carry-forward averages ──────────────────────────────

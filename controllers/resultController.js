@@ -88,21 +88,23 @@ export const uploadResult = async (req, res) => {
 
     for (const s of subjects) {
       // cwk is no longer collected — only hwk, ca1, ca2, exam
-      if (!s.name || s.hwk === undefined || s.ca1 === undefined || s.ca2 === undefined || s.exam === undefined)
+      if (!s.name || s.hwk === undefined || s.cf === undefined || s.ca1 === undefined || s.ca2 === undefined || s.exam === undefined)
         return res.status(400).json({ message: `Missing score fields for subject: ${s.name || "unknown"}` });
 
       if (Number(s.hwk)  < 0 || Number(s.hwk)  > 10) return res.status(400).json({ message: `HWK must be 0–10 for ${s.name}` });
+      if (Number(s.cf)  < 0 || Number(s.cf)  > 10) return res.status(400).json({ message: `CF must be 0–10 for ${s.name}` });
       if (Number(s.ca1)  < 0 || Number(s.ca1)  > 10) return res.status(400).json({ message: `CA1 must be 0–10 for ${s.name}` });
       if (Number(s.ca2)  < 0 || Number(s.ca2)  > 10) return res.status(400).json({ message: `CA2 must be 0–10 for ${s.name}` });
       if (Number(s.exam) < 0 || Number(s.exam) > 60) return res.status(400).json({ message: `Exam must be 0–60 for ${s.name}` });
 
-      const total          = Number(s.hwk) + Number(s.ca1) + Number(s.ca2) + Number(s.exam);
+      const total          = Number(s.hwk) + Number(s.cf) + Number(s.ca1) + Number(s.ca2) + Number(s.exam);
       const { grade, remark } = computeGrade(total);
       totalScore += total;
 
       gradedSubjects.push({
         name:  s.name,
         hwk:   Number(s.hwk),
+        cf:    Number(s.cf),
         ca1:   Number(s.ca1),
         ca2:   Number(s.ca2),
         exam:  Number(s.exam),
@@ -227,6 +229,7 @@ export const finalizeResult = async (req, res) => {
     const subjects = subjectResults.map((sr) => ({
       name:              sr.subject,
       hwk:               sr.hwk,
+      cf:                sr.cf,
       ca1:               sr.ca1,
       ca2:               sr.ca2,
       exam:              sr.exam,
