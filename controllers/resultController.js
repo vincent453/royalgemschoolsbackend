@@ -3,7 +3,7 @@ import Student            from "../models/studentModel.js";
 import SubjectResult      from "../models/subjectResultModel.js";
 import ClassSubjectConfig from "../models/classSubjectConfigModel.js";
 
-const MAX_TOTAL = 90; // hwk(10) + ca1(10) + ca2(10) + exam(60)
+const MAX_TOTAL = 100; // hwk(10) + ca1(10) + ca2(10) + exam(60)
 
 // ─────────────────────────────────────────────────────────────
 // HELPERS
