@@ -35,7 +35,12 @@ const app = express();
 
 // ── Webhook raw body — MUST be before express.json() ─────────
 // Webhook gets raw body via route-level middleware
-app.use(express.json());
+app.use((req, res, next) => {
+  if (req.originalUrl === "/api/shop/webhook") {
+    return next();
+  }
+  express.json()(req, res, next);
+});
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 app.use(morgan("dev"));
