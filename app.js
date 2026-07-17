@@ -33,7 +33,7 @@ import shopRoutes               from "./routes/ShopRoutes.js";
 
 const app = express();
 
-app.use("/api/shop", shopRoutes);
+
 // ── Webhook raw body — MUST be before express.json() ─────────
 // Webhook gets raw body via route-level middleware
 app.use(express.json());
@@ -62,6 +62,7 @@ app.use("/api/receipts",        receiptRoutes);
 app.use("/api/attendance",      attendanceRoutes);
 app.use("/api/suppliers",       supplierRoutes);
 app.use("/api/inventory",       inventoryRoutes);
+app.use("/api/shop",            shopRoutes);
 
 // ── View Routes ───────────────────────────────────────────────
 app.use("/api/admin", adminViewRoutes);
