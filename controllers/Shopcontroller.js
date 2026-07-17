@@ -3,6 +3,7 @@ import Product         from "../models/productModel.js";
 import ProductCategory from "../models/Productcategorymodel.js";
 import Order           from "../models/Ordermodel.js";
 import Inventory       from "../models/inventoryModel.js";
+import slugify from "slugify";
 
 const uploadToCloudinary = (buffer) => {
   cloudinary.config({
@@ -102,13 +103,18 @@ export const createCategory = async (req, res) => {
       image = result.secure_url;
     }
 
-    const cat = await ProductCategory.create({
-      name: name.trim(),
-      description: description?.trim() ?? "",
-      sortOrder: Number(sortOrder) || 0,
-      image,
-      createdBy: req.admin._id,
-    });
+   const cat = await ProductCategory.create({
+  name: name.trim(),
+  slug: slugify(name, {
+    lower: true,
+    strict: true,
+  }),
+  description: description?.trim() ?? "",
+  sortOrder: Number(sortOrder) || 0,
+  image,
+  isActive: req.body.isActive !== "false",
+  createdBy: req.admin._id,
+});
     res.status(201).json(cat);
   } catch (err) {
     if (err.code === 11000) return res.status(400).json({ message: "Category name already exists" });
