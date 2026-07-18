@@ -6,7 +6,7 @@ import {
   getShopDashboard, getCategories, createCategory, updateCategory, deleteCategory,
   getProducts, getProduct, createProduct, updateProduct, deleteProduct,
   getPublicProducts, getSalesReport,
-} from "../controllers/shopController.js";
+} from "../controllers/Shopcontroller.js";
 import {
   getOrders, getOrder, updateOrderStatus,
   placeOrder, initializeShopPayment, shopWebhook,
