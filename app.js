@@ -33,14 +33,26 @@ import shopRoutes               from "./routes/ShopRoutes.js";
 
 const app = express();
 
-  
-// ── Webhook raw body — MUST be before express.json() ─────────
-// Webhook gets raw body via route-level middleware
-// in server.js, BEFORE app.use(express.json())
-app.use("/api/shop/webhook", express.raw({ type: "application/json" }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// ── Webhook raw body — MUST be before express.json() ─────────
+// Paystack's signature is computed against the exact raw bytes of the
+// request body. express.json() below would consume the stream and
+// replace req.body with a parsed object, which breaks the raw-body
+// middleware defined on the /webhook route in ShopRoutes.js.
+// So we skip global JSON parsing for that one path and let the
+// route-level express.raw() in ShopRoutes.js handle it instead.
+const SHOP_WEBHOOK_PATH = "/api/shop/webhook";
+
+app.use((req, res, next) => {
+  if (req.originalUrl === SHOP_WEBHOOK_PATH) return next();
+  express.json()(req, res, next);
+});
+
+app.use((req, res, next) => {
+  if (req.originalUrl === SHOP_WEBHOOK_PATH) return next();
+  express.urlencoded({ extended: true })(req, res, next);
+});
+
 app.use(cors());
 app.use(morgan("dev"));
 
