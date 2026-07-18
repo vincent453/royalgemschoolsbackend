@@ -7,7 +7,6 @@ import {
   deleteFeeStatement,
   getMyFeeStatements,
   initializePaystackPayment,
-  handlePaystackWebhook,
 } from "../controllers/feeController.js";
 import {
   protectStaffAdmin,
@@ -17,13 +16,10 @@ import { protectPortal } from "../middleware/portalMiddleware.js";
 
 const router = express.Router();
 
-// ── WEBHOOK — must be FIRST before /:id catches it ───────────
-// Raw body required for Paystack signature verification
-router.post(
-  "/paystack/webhook",
-  express.raw({ type: "application/json" }),
-  handlePaystackWebhook
-);
+// NOTE: the Paystack webhook for fee payments has moved to the
+// unified endpoint at /api/webhooks/paystack (see routes/paystackWebhookRoutes.js).
+// Paystack only supports one webhook URL per mode on the whole account,
+// so shop and fee payments are now both handled there.
 
 // ── PAYMENT INITIALIZE ────────────────────────────────────────
 router.post("/paystack/initialize", protectPortal, initializePaystackPayment);

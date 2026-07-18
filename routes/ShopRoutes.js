@@ -9,7 +9,7 @@ import {
 } from "../controllers/Shopcontroller.js";
 import {
   getOrders, getOrder, updateOrderStatus,
-  placeOrder, initializeShopPayment, shopWebhook,
+  placeOrder, initializeShopPayment,
   getMyOrders, getCustomers,
 } from "../controllers/OrderContoller.js";
 
@@ -23,8 +23,10 @@ const upload = multer({
   },
 });
 
-// ── Webhook (raw body — must be first) ───────────────────────
-router.post("/webhook", express.raw({ type: "application/json" }), shopWebhook);
+// NOTE: the Paystack webhook for shop payments has moved to the
+// unified endpoint at /api/webhooks/paystack (see routes/paystackWebhookRoutes.js).
+// Paystack only supports one webhook URL per mode on the whole account,
+// so shop and fee payments are now both handled there.
 
 // ── Public shop (parent portal — no auth needed for browsing) ─
 router.get("/public/products", getPublicProducts);

@@ -29,6 +29,7 @@ import attendanceRoutes         from "./routes/attendanceRoutes.js";
 import supplierRoutes           from "./routes/suppliersRoutes.js";
 import inventoryRoutes          from "./routes/inventoryRoutes.js";
 import shopRoutes               from "./routes/ShopRoutes.js";
+import paystackWebhookRoutes    from "./routes/paystackWebhookRoutes.js";
 
 
 const app = express();
@@ -38,18 +39,18 @@ const app = express();
 // Paystack's signature is computed against the exact raw bytes of the
 // request body. express.json() below would consume the stream and
 // replace req.body with a parsed object, which breaks the raw-body
-// middleware defined on the /webhook route in ShopRoutes.js.
-// So we skip global JSON parsing for that one path and let the
-// route-level express.raw() in ShopRoutes.js handle it instead.
-const SHOP_WEBHOOK_PATH = "/api/shop/webhook";
+// middleware defined on the /api/webhooks/paystack route. So we skip
+// global JSON parsing for that one path and let the route-level
+// express.raw() in paystackWebhookRoutes.js handle it instead.
+const PAYSTACK_WEBHOOK_PATH = "/api/webhooks/paystack";
 
 app.use((req, res, next) => {
-  if (req.originalUrl === SHOP_WEBHOOK_PATH) return next();
+  if (req.originalUrl === PAYSTACK_WEBHOOK_PATH) return next();
   express.json()(req, res, next);
 });
 
 app.use((req, res, next) => {
-  if (req.originalUrl === SHOP_WEBHOOK_PATH) return next();
+  if (req.originalUrl === PAYSTACK_WEBHOOK_PATH) return next();
   express.urlencoded({ extended: true })(req, res, next);
 });
 
@@ -78,6 +79,7 @@ app.use("/api/attendance",      attendanceRoutes);
 app.use("/api/suppliers",       supplierRoutes);
 app.use("/api/inventory",       inventoryRoutes);
 app.use("/api/shop",            shopRoutes);
+app.use("/api/webhooks",        paystackWebhookRoutes);
 
 // ── View Routes ───────────────────────────────────────────────
 app.use("/api/admin", adminViewRoutes);

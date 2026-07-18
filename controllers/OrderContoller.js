@@ -1,4 +1,3 @@
-import crypto       from "crypto";
 import Order         from "../models/Ordermodel.js";
 import Product       from "../models/productModel.js";
 import Inventory     from "../models/inventoryModel.js";
@@ -79,7 +78,6 @@ export const placeOrder = async (req, res) => {
 
     if (!items?.length) return res.status(400).json({ message: "No items in order" });
 
-    // Validate stock and build items
     const orderItems = [];
     let subtotal = 0;
 
@@ -90,7 +88,6 @@ export const placeOrder = async (req, res) => {
       if (!product) return res.status(404).json({ message: `Product not found: ${item.productId}` });
       if (product.status !== "Active") return res.status(400).json({ message: `${product.productName} is not available` });
 
-      // Stock check from linked inventory
       const availableQty = product.inventoryItem?.quantity ?? 0;
       if (availableQty < item.quantity) {
         return res.status(400).json({
@@ -154,12 +151,9 @@ export const initializeShopPayment = async (req, res) => {
       return res.status(403).json({ message: "Access denied" });
     }
 
-    // ── Reuse an existing in-flight reference instead of minting a
-    // new one every time this endpoint is hit. Overwriting
-    // paystackReference on every call orphans any Paystack checkout
-    // session the student already opened with the old reference —
-    // if they pay through that older session, the webhook can never
-    // find the order because the field has since changed underneath it.
+    // Reuse an in-flight reference instead of overwriting it on every
+    // call — overwriting orphans any checkout session already opened
+    // with the old reference.
     let reference = order.paystackReference;
 
     if (!reference) {
@@ -197,115 +191,101 @@ export const initializeShopPayment = async (req, res) => {
 };
 
 // ─────────────────────────────────────────────────────────────
-// PAYSTACK WEBHOOK — handles shop payments
-// POST /api/shop/webhook
+// PROCESS SHOP CHARGE — pure business logic, no HTTP concerns.
+// Called by the unified Paystack webhook controller after signature
+// verification. Kept separate from any Express req/res so it can be
+// invoked directly, and unit-tested independently if needed.
 // ─────────────────────────────────────────────────────────────
-export const shopWebhook = async (req, res) => {
-  try {
-    const signature = req.headers["x-paystack-signature"];
-    const rawBody   = Buffer.isBuffer(req.body)
-      ? req.body
-      : Buffer.from(JSON.stringify(req.body));
+export const processShopCharge = async (eventData) => {
+  const { reference, amount, metadata } = eventData;
 
-    const hash = crypto
-      .createHmac("sha512", process.env.PAYSTACK_SECRET_KEY)
-      .update(rawBody)
-      .digest("hex");
+  // Primary lookup by stored reference; fallback to metadata.orderId
+  // in case the reference on the order was ever changed after the
+  // checkout session was created.
+  let order = await Order.findOne({ paystackReference: reference });
 
-    if (!signature || signature !== hash) {
-      return res.status(401).json({ message: "Invalid signature" });
+  if (!order && metadata?.orderId) {
+    order = await Order.findById(metadata.orderId);
+    if (order) {
+      console.warn(
+        `[SHOP-CHARGE] Reference mismatch for order ${order._id}. ` +
+        `Stored paystackReference was "${order.paystackReference}", ` +
+        `webhook reference was "${reference}". Recovered via metadata.orderId.`
+      );
     }
+  }
 
-    const event = JSON.parse(rawBody.toString());
-    if (event.event !== "charge.success") return res.sendStatus(200);
+  if (!order) {
+    console.warn("[SHOP-CHARGE] No order found for reference:", reference);
+    return;
+  }
+  if (order.paymentStatus === "paid") {
+    console.log("[SHOP-CHARGE] Order already paid, skipping (idempotent):", order._id.toString());
+    return;
+  }
 
-    const { reference, amount, metadata } = event.data;
+  // ── 1. Mark order as paid ──────────────────────────────
+  order.paymentStatus     = "paid";
+  order.orderStatus       = "processing";
+  order.paidAt            = new Date();
+  order.paystackResponse  = eventData;
+  order.receiptNumber     = `RCPT-${Date.now()}`;
+  order.paystackReference = reference; // keep in sync with what actually cleared
+  await order.save();
+  console.log("[SHOP-CHARGE] Order marked as paid:", order._id.toString());
 
-    // ── Primary lookup: by the reference stored on the order.
-    let order = await Order.findOne({ paystackReference: reference });
+  // ── 2. For each item: reduce inventory + stock movement ──
+  for (const item of order.items) {
+    const product = await Product.findById(item.product).populate("inventoryItem");
+    if (!product?.inventoryItem) continue;
 
-    // ── Fallback: if the reference was ever overwritten (e.g. by a
-    // duplicate initialize call before this fix), Paystack still
-    // echoes back the metadata we originally sent, so we can recover
-    // the correct order via orderId instead of silently dropping the
-    // payment.
-    if (!order && metadata?.orderId) {
-      order = await Order.findById(metadata.orderId);
-      if (order) {
-        console.warn(
-          `[SHOP-WEBHOOK] Reference mismatch for order ${order._id}. ` +
-          `Expected via metadata.orderId, stored paystackReference was "${order.paystackReference}", ` +
-          `webhook reference was "${reference}". Recovered via metadata fallback.`
-        );
-      }
-    }
+    const inv = await Inventory.findById(product.inventoryItem._id);
+    if (!inv) continue;
 
-    if (!order || order.paymentStatus === "paid") return res.sendStatus(200);
+    const newQty = Math.max(0, (inv.quantity || 0) - item.quantity);
+    inv.quantity  = newQty;
 
-    // ── 1. Mark order as paid ──────────────────────────────
-    order.paymentStatus    = "paid";
-    order.orderStatus      = "processing";
-    order.paidAt           = new Date();
-    order.paystackResponse = event.data;
-    order.receiptNumber    = `RCPT-${Date.now()}`;
-    // Keep the reference that actually cleared, so future lookups are consistent.
-    order.paystackReference = reference;
+    if (newQty <= 0)                     inv.status = "Out of Stock";
+    else if (newQty <= inv.minimumStock) inv.status = "Low Stock";
+    else                                  inv.status = "In Stock";
+
+    await inv.save();
+
+    await StockMovement.create({
+      item:         inv._id,
+      type:         "stock-out",
+      quantity:     item.quantity,
+      balanceAfter: newQty,
+      reason:       `School Shop Order — ${order.orderNumber}`,
+      reference:    order.orderNumber,
+      performedBy:  order.customer.studentId,
+    }).catch(err => console.error("[SHOP-CHARGE] StockMovement create error:", err.message));
+
+    await Product.findByIdAndUpdate(product._id, {
+      $inc: { totalSold: item.quantity, totalRevenue: item.subtotal },
+      status: newQty <= 0 ? "Out of Stock" : "Active",
+    });
+  }
+
+  // ── 3. Auto-create Income entry ────────────────────────
+  const income = await Income.create({
+    title:       `School Shop — Order ${order.orderNumber}`,
+    amount:      Number(amount) / 100,
+    category:    "Sales",
+    source:      "School Shop",
+    date:        new Date(),
+    description: `Online shop payment from ${order.customer.name}. Items: ${order.items.map(i => i.productName).join(", ")}`,
+    reference,
+    recordedBy:  null,
+  }).catch(err => {
+    console.error("[SHOP-CHARGE] Income create error:", err.message);
+    return null;
+  });
+
+  if (income) {
+    order.incomeRecord = income._id;
     await order.save();
-
-    // ── 2. For each item: reduce inventory + stock movement ──
-    for (const item of order.items) {
-      const product = await Product.findById(item.product).populate("inventoryItem");
-      if (!product?.inventoryItem) continue;
-
-      const inv = await Inventory.findById(product.inventoryItem._id);
-      if (!inv) continue;
-
-      const newQty = Math.max(0, (inv.quantity || 0) - item.quantity);
-      inv.quantity  = newQty;
-
-      if (newQty <= 0)                     inv.status = "Out of Stock";
-      else if (newQty <= inv.minimumStock) inv.status = "Low Stock";
-      else                                  inv.status = "In Stock";
-
-      await inv.save();
-
-      await StockMovement.create({
-        item:         inv._id,
-        type:         "stock-out",
-        quantity:     item.quantity,
-        balanceAfter: newQty,
-        reason:       `School Shop Order — ${order.orderNumber}`,
-        reference:    order.orderNumber,
-        performedBy:  order.customer.studentId,
-      }).catch(err => console.error("StockMovement create error:", err));
-
-      await Product.findByIdAndUpdate(product._id, {
-        $inc: { totalSold: item.quantity, totalRevenue: item.subtotal },
-        status: newQty <= 0 ? "Out of Stock" : "Active",
-      });
-    }
-
-    // ── 3. Auto-create Income entry ────────────────────────
-    const income = await Income.create({
-      title:       `School Shop — Order ${order.orderNumber}`,
-      amount:      Number(amount) / 100,
-      category:    "Sales",
-      source:      "School Shop",
-      date:        new Date(),
-      description: `Online shop payment from ${order.customer.name}. Items: ${order.items.map(i => i.productName).join(", ")}`,
-      reference,
-      recordedBy:  null,
-    }).catch(err => console.error("Income create error:", err));
-
-    if (income) {
-      order.incomeRecord = income._id;
-      await order.save();
-    }
-
-    return res.sendStatus(200);
-  } catch (err) {
-    console.error("Shop webhook error:", err);
-    return res.sendStatus(200);
+    console.log("[SHOP-CHARGE] Income record linked:", income._id.toString());
   }
 };
 
