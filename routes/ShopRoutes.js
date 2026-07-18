@@ -11,7 +11,7 @@ import {
   getOrders, getOrder, updateOrderStatus,
   placeOrder, initializeShopPayment, shopWebhook,
   getMyOrders, getCustomers,
-} from "../controllers/orderController.js";
+} from "../controllers/OrderContoller.js";
 
 const router = express.Router();
 const upload = multer({
