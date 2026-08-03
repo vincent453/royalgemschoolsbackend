@@ -30,7 +30,8 @@ import supplierRoutes           from "./routes/suppliersRoutes.js";
 import inventoryRoutes          from "./routes/inventoryRoutes.js";
 import shopRoutes               from "./routes/ShopRoutes.js";
 import paystackWebhookRoutes    from "./routes/paystackWebhookRoutes.js";
-
+import scholarshipRoutes         from "./routes/scholarshipRoutes.js";
+import learningRoutes            from "./routes/learningRoutes.js";
 
 const app = express();
 
@@ -79,6 +80,8 @@ app.use("/api/attendance",      attendanceRoutes);
 app.use("/api/suppliers",       supplierRoutes);
 app.use("/api/inventory",       inventoryRoutes);
 app.use("/api/shop",            shopRoutes);
+app.use("/api/scholarships",    scholarshipRoutes);
+app.use("/api/learning",        learningRoutes);
 app.use("/api/webhooks",        paystackWebhookRoutes);
 
 // ── View Routes ───────────────────────────────────────────────
