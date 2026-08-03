@@ -1,6 +1,7 @@
 import FeeStatement from "../models/feeStatementModel.js";
 import FeePayment from "../models/feePaymentModel.js";
 import Student from "../models/studentModel.js";
+import Income from "../models/incomeModel.js";
 import { issueReceipt } from "../services/receiptService.js";
 
 const buildReference = () => {
@@ -325,6 +326,24 @@ export const processFeeCharge = async (eventData) => {
     console.log("[FEE-CHARGE] Statement saved successfully. New status:", statement.status);
   } else {
     console.warn("[FEE-CHARGE] No statement found for payment");
+  }
+
+  const paidAmount = Number(amount) / 100;
+  const receiptRef = payment.paystackReference || reference;
+  const existingIncome = await Income.findOne({ receiptRef });
+
+  if (!existingIncome) {
+    await Income.create({
+      amount: paidAmount,
+      category: "Fee Payment",
+      source: "Student Portal",
+      date: new Date(),
+      description: `Fee payment received for statement ${statement?.reference || payment.feeStatement}`,
+      receiptRef,
+    });
+    console.log("[FEE-CHARGE] Accounting income entry created successfully");
+  } else {
+    console.log("[FEE-CHARGE] Accounting income entry already exists, skipping duplicate");
   }
 
   // Issue receipt in background (non-blocking)

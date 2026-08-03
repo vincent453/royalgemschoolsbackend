@@ -22,13 +22,12 @@ export const unifiedLogin = async (req, res) => {
         return res.status(401).json({ message: "Invalid registration number or PIN" });
       }
 
+      const inputPin = pin.trim().toUpperCase();
       const pinDoc = await Pin.findOne({
-        pin: pin.trim(),
-        $or: [
-          { usedBy: student._id },
-          { usedBy: null, isUsed: false },
-        ],
-      });
+        pin: inputPin,
+        usedBy: student._id,
+        isUsed: false,
+      }).sort({ createdAt: -1 });
 
       if (!pinDoc) {
         return res.status(401).json({ message: "Invalid registration number or PIN" });
@@ -42,10 +41,11 @@ export const unifiedLogin = async (req, res) => {
 
       if (!pinDoc.usedBy) {
         pinDoc.usedBy = student._id;
-        pinDoc.usedAt = new Date();
-        pinDoc.isUsed = true;
-        await pinDoc.save();
       }
+
+      pinDoc.usedAt = new Date();
+      pinDoc.isUsed = false;
+      await pinDoc.save();
 
       const portalRole = role === "parent" ? "parent" : "student";
 

@@ -52,20 +52,21 @@ export const generatePins = async (req, res) => {
       const student = await Student.findById(sid);
       if (!student) continue;
 
-      // Invalidate any existing unused PINs for this student
+      // Invalidate any existing active PINs for this student so the new one becomes the current one.
       await Pin.updateMany(
         { usedBy: student._id, isUsed: false },
-        { isUsed: true }
+        { $set: { isUsed: true, expiresAt: new Date() } }
       );
 
       const raw = randPin(Number(pinLength));
+      const defaultExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
       await Pin.create({
         pin:         raw,
         isUsed:      false,
         usedBy:      student._id,
         generatedBy: req.admin._id,
-        expiresAt:   null,
+        expiresAt:   defaultExpiry,
       });
 
       results.push({
@@ -105,7 +106,7 @@ export const pinLogin = async (req, res) => {
         .json({ message: "Invalid registration number or PIN" });
     }
 
-    // Find the most recent unused PIN for this student
+    // Find the most recent active PIN for this student
     const pinDoc = await Pin.findOne({
       usedBy: student._id,
       isUsed: false,
@@ -131,8 +132,7 @@ export const pinLogin = async (req, res) => {
         .json({ message: "Invalid registration number or PIN" });
     }
 
-    // Mark PIN as used
-    pinDoc.isUsed = true;
+    // Keep the PIN reusable until its expiry window, while recording the last use.
     pinDoc.usedAt = new Date();
     await pinDoc.save();
 
