@@ -82,7 +82,6 @@ app.use("/api/suppliers",       supplierRoutes);
 app.use("/api/inventory",       inventoryRoutes);
 app.use("/api/shop",            shopRoutes);
 app.use("/api/scholarships",    scholarshipRoutes);
-app.use("/api/learning",        learningRoutes);
 app.use("/api/webhooks",        paystackWebhookRoutes);
 app.use("/api/lms",             lmsRoutes);
 
