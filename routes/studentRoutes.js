@@ -1,5 +1,6 @@
 import express from "express";
 import multer from "multer";
+
 import {
   addStudent,
   getStudents,
@@ -7,19 +8,56 @@ import {
   updateStudent,
   deleteStudent,
 } from "../controllers/studentController.js";
-import { protect, protectAdminOrUser, protectStudentOrPortal } from "../middleware/authMiddleware.js";
+
+import {
+  protectAdminOrUser,
+  protectStaffAdmin,
+  protectStudentOrPortal,
+  restrictTo,
+} from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+});
 
-// ✅ Admin + Teacher can view students
-router.get("/", protectAdminOrUser, getStudents);
-router.get("/:id", protectStudentOrPortal, getStudentById);
+// Super Admin + Admin + Teaching staff
+router.get(
+  "/",
+  protectAdminOrUser,
+  restrictTo("admin", "teacher", "subject_teacher", "class_teacher"),
+  getStudents
+);
 
-// 🔒 Admin only — add, edit, delete
-router.post("/",    protect, upload.single("profilePhoto"), addStudent);
-router.put("/:id",  protect, upload.single("profilePhoto"), updateStudent);
-router.delete("/:id", protect, deleteStudent);
+// Authenticated portal/staff access,
+// with the controller/middleware responsible for
+// determining whether the user can access this particular student.
+router.get(
+  "/:id",
+  protectStudentOrPortal,
+  getStudentById
+);
+
+// Super Admin + Admin
+router.post(
+  "/",
+  protectStaffAdmin,
+  upload.single("profilePhoto"),
+  addStudent
+);
+
+router.put(
+  "/:id",
+  protectStaffAdmin,
+  upload.single("profilePhoto"),
+  updateStudent
+);
+
+router.delete(
+  "/:id",
+  protectStaffAdmin,
+  deleteStudent
+);
 
 export default router;
