@@ -98,23 +98,42 @@ export const protect = async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────
 // protectStaffAdmin — Super Admin OR user with role "admin"
 // ─────────────────────────────────────────────────────────────
-export const protectStaffAdmin = async (req, res, next) => {
+export const protectStaffPortal = async (req, res, next) => {
   try {
     const { admin, user, isSuperAdmin } = await resolveToken(req);
+
+    // ✅ Super Admin always has staff portal access
     if (admin && isSuperAdmin) {
-      req.admin = admin; req.isSuperAdmin = true;
+      req.admin = admin;
+      req.isSuperAdmin = true;
+      req.userType = "admin";
       return next();
     }
-    if (user && user.role === "admin" && user.isActive) {
-      req.user = user; req.admin = user; req.isSuperAdmin = false;
+
+    // ✅ Normal staff users
+    if (
+      user &&
+      user.isActive &&
+      STAFF_ROLES.includes(user.role)
+    ) {
+      req.user = user;
+      req.isSuperAdmin = false;
+      req.userType = "user";
+
+      if (user.role === "admin") {
+        req.admin = user;
+      }
+
       return next();
     }
-    return res.status(403).json({ message: "Access denied. Admin privileges required." });
+
+    return res.status(403).json({
+      message: "Access denied. Staff portal only.",
+    });
   } catch (err) {
     sendUnauth(res, err);
   }
 };
-
 // ─────────────────────────────────────────────────────────────
 // protectAdminOrUser — Super Admin OR any active staff user
 // Use for: read ops, dashboards, shared views
