@@ -1,7 +1,7 @@
 import express from "express";
 import multer  from "multer";
-import { protectAdminOrUser, protectTeacher } from "../../middleware/authMiddleware.js";
-import { protectPortal }                      from "../../middleware/portalMiddleware.js";
+import { protectAdminOrUser, protectTeacher } from "../middleware/authMiddleware.js";
+import { protectPortal }                      from "../middleware/portalMiddleware.js";
 import {
   createAssignment, getAssignments, getAssignment,
   updateAssignment, deleteAssignment,
