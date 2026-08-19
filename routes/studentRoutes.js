@@ -22,24 +22,28 @@ const upload = multer({
   storage: multer.memoryStorage(),
 });
 
-// Super Admin + Admin + Teaching staff
+// Super Admin + Admin + teaching staff can view students
 router.get(
   "/",
   protectAdminOrUser,
-  restrictTo("admin", "teacher", "subject_teacher", "class_teacher"),
+  restrictTo(
+    "admin",
+    "teacher",
+    "subject_teacher",
+    "class_teacher"
+  ),
   getStudents
 );
 
-// Authenticated portal/staff access,
-// with the controller/middleware responsible for
-// determining whether the user can access this particular student.
+// Authenticated users can reach this route.
+// Controller should verify ownership/access.
 router.get(
   "/:id",
   protectStudentOrPortal,
   getStudentById
 );
 
-// Super Admin + Admin
+// Super Admin + Admin can add students
 router.post(
   "/",
   protectStaffAdmin,
@@ -47,6 +51,7 @@ router.post(
   addStudent
 );
 
+// Super Admin + Admin can edit students
 router.put(
   "/:id",
   protectStaffAdmin,
@@ -54,6 +59,7 @@ router.put(
   updateStudent
 );
 
+// Super Admin + Admin can delete students
 router.delete(
   "/:id",
   protectStaffAdmin,

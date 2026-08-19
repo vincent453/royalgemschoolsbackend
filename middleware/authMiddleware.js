@@ -264,3 +264,51 @@ export const publicOrProtect = async (req, res, next) => {
 
 // Aliases for backward compatibility
 export const protectAdmin = protect;
+
+// ─────────────────────────────────────────────────────────────
+// protectStudentOrPortal
+// Super Admin + staff + student + parent
+//
+// For /students/:id, authentication happens here.
+// The controller should still verify that a student/parent
+// is allowed to access THAT specific student.
+// ─────────────────────────────────────────────────────────────
+export const protectStudentOrPortal = async (req, res, next) => {
+  try {
+    const { admin, user, isSuperAdmin } = await resolveToken(req);
+
+    // Super Admin
+    if (admin && isSuperAdmin) {
+      req.admin = admin;
+      req.isSuperAdmin = true;
+      req.userType = "admin";
+      return next();
+    }
+
+    // Active User
+    if (user && user.isActive) {
+      req.user = user;
+      req.isSuperAdmin = false;
+      req.userType = "user";
+
+      // Admin staff user
+      if (user.role === "admin") {
+        req.admin = user;
+      }
+
+      return next();
+    }
+
+    if (user && !user.isActive) {
+      return res.status(403).json({
+        message: "Account is deactivated. Contact admin.",
+      });
+    }
+
+    return res.status(401).json({
+      message: "Not authorized.",
+    });
+  } catch (err) {
+    sendUnauth(res, err);
+  }
+};
