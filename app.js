@@ -31,7 +31,7 @@ import inventoryRoutes          from "./routes/inventoryRoutes.js";
 import shopRoutes               from "./routes/ShopRoutes.js";
 import paystackWebhookRoutes    from "./routes/paystackWebhookRoutes.js";
 import scholarshipRoutes         from "./routes/scholarshipRoutes.js";
-import learningRoutes            from "./routes/learningRoutes.js";
+import lmsRoutes               from "./routes/lmsRoutes.js";
 
 const app = express();
 
@@ -83,6 +83,7 @@ app.use("/api/shop",            shopRoutes);
 app.use("/api/scholarships",    scholarshipRoutes);
 app.use("/api/learning",        learningRoutes);
 app.use("/api/webhooks",        paystackWebhookRoutes);
+app.use("/api/lms",             lmsRoutes);
 
 // ── View Routes ───────────────────────────────────────────────
 app.use("/api/admin", adminViewRoutes);

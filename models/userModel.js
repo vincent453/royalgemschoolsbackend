@@ -22,14 +22,23 @@ const userSchema = new mongoose.Schema(
       minlength: [6, "Password must be at least 6 characters"],
       select: false, // Don't return password by default
     },
-    role: {
-      type: String,
-      enum: {
-        values: ["admin", "student", "parent", "teacher", "subject_teacher", "class_teacher"],
-        message: "Invalid role",
-      },
-      default: "student",
-    },
+role: {
+  type: String,
+  enum: {
+    values: [
+      "admin",
+      "student",
+      "parent",
+      "teacher",
+      "subject_teacher",
+      "class_teacher",
+      "accountant",
+      "inventory_manager",
+    ],
+    message: "Invalid role",
+  },
+  default: "student",
+},
     student: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Student",
