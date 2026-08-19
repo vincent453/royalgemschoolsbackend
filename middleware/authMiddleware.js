@@ -98,42 +98,23 @@ export const protect = async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────
 // protectStaffAdmin — Super Admin OR user with role "admin"
 // ─────────────────────────────────────────────────────────────
-export const protectStaffPortal = async (req, res, next) => {
+export const protectStaffAdmin = async (req, res, next) => {
   try {
     const { admin, user, isSuperAdmin } = await resolveToken(req);
-
-    // ✅ Super Admin always has staff portal access
     if (admin && isSuperAdmin) {
-      req.admin = admin;
-      req.isSuperAdmin = true;
-      req.userType = "admin";
+      req.admin = admin; req.isSuperAdmin = true;
       return next();
     }
-
-    // ✅ Normal staff users
-    if (
-      user &&
-      user.isActive &&
-      STAFF_ROLES.includes(user.role)
-    ) {
-      req.user = user;
-      req.isSuperAdmin = false;
-      req.userType = "user";
-
-      if (user.role === "admin") {
-        req.admin = user;
-      }
-
+    if (user && user.role === "admin" && user.isActive) {
+      req.user = user; req.admin = user; req.isSuperAdmin = false;
       return next();
     }
-
-    return res.status(403).json({
-      message: "Access denied. Staff portal only.",
-    });
+    return res.status(403).json({ message: "Access denied. Admin privileges required." });
   } catch (err) {
     sendUnauth(res, err);
   }
 };
+
 // ─────────────────────────────────────────────────────────────
 // protectAdminOrUser — Super Admin OR any active staff user
 // Use for: read ops, dashboards, shared views
@@ -183,45 +164,6 @@ export const protectUser = async (req, res, next) => {
   }
 };
 
-export const protectStudentOrPortal = async (req, res, next) => {
-  try {
-    const { admin, user, isSuperAdmin } = await resolveToken(req);
-
-    // Super Admin
-    if (admin && isSuperAdmin) {
-      req.admin = admin;
-      req.isSuperAdmin = true;
-      req.userType = "admin";
-      return next();
-    }
-
-    // Active User
-    if (user && user.isActive) {
-      req.user = user;
-      req.isSuperAdmin = false;
-      req.userType = "user";
-
-      // Admin staff user
-      if (user.role === "admin") {
-        req.admin = user;
-      }
-
-      return next();
-    }
-
-    if (user && !user.isActive) {
-      return res.status(403).json({
-        message: "Account is deactivated. Contact admin.",
-      });
-    }
-
-    return res.status(401).json({
-      message: "Not authorized.",
-    });
-  } catch (err) {
-    sendUnauth(res, err);
-  }
-};
 // ─────────────────────────────────────────────────────────────
 // protectTeacher — Super Admin OR any teaching role
 // ─────────────────────────────────────────────────────────────
@@ -323,11 +265,47 @@ export const publicOrProtect = async (req, res, next) => {
 // Aliases for backward compatibility
 export const protectAdmin = protect;
 
+
 // ─────────────────────────────────────────────────────────────
 // protectStudentOrPortal
-// Super Admin + staff + student + parent
-//
-// For /students/:id, authentication happens here.
-// The controller should still verify that a student/parent
-// is allowed to access THAT specific student.
+// Super Admin + active staff + student + parent
 // ─────────────────────────────────────────────────────────────
+export const protectStudentOrPortal = async (req, res, next) => {
+  try {
+    const { admin, user, isSuperAdmin } = await resolveToken(req);
+
+    // ✅ Super Admin
+    if (admin && isSuperAdmin) {
+      req.admin = admin;
+      req.isSuperAdmin = true;
+      req.userType = "admin";
+      return next();
+    }
+
+    // ✅ Active User (admin, teacher, student, parent, etc.)
+    if (user && user.isActive) {
+      req.user = user;
+      req.isSuperAdmin = false;
+      req.userType = "user";
+
+      if (user.role === "admin") {
+        req.admin = user;
+      }
+
+      return next();
+    }
+
+    // ❌ Deactivated user
+    if (user && !user.isActive) {
+      return res.status(403).json({
+        message: "Account is deactivated. Contact admin.",
+      });
+    }
+
+    return res.status(401).json({
+      message: "Not authorized.",
+    });
+  } catch (err) {
+    sendUnauth(res, err);
+  }
+};
