@@ -7,7 +7,7 @@ import jwt     from "jsonwebtoken";
 
 // Staff roles allowed to log into the staff portal
 const STAFF_ROLES = [
-  "admin", "accountant", "inventory_manager",
+  "super_admin", "admin", "accountant", "inventory_manager",
   "teacher", "subject_teacher", "class_teacher",
 ];
 
