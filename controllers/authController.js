@@ -1,25 +1,19 @@
-import Admin   from "../models/adminModel.js";
-import User    from "../models/userModel.js";
+import Admin from "../models/adminModel.js";
+import User from "../models/userModel.js";
 import Student from "../models/studentModel.js";
-import Pin     from "../models/pinModle.js";
-import bcrypt  from "bcryptjs";
-import jwt     from "jsonwebtoken";
+import Pin from "../models/pinModle.js";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
-// All roles allowed in the staff portal (User collection)
-const STAFF_ROLES = [
-  "admin", "accountant", "inventory_manager",
-  "teacher", "subject_teacher", "class_teacher",
-];
-
-// ─────────────────────────────────────────────────────────────
+// ==========================================
 // UNIFIED LOGIN — one endpoint, all roles
 // POST /api/auth/login
-// ─────────────────────────────────────────────────────────────
+// ==========================================
 export const unifiedLogin = async (req, res) => {
   try {
     const { email, password, regNumber, pin, role } = req.body;
 
-    // ── BRANCH A: regNumber + PIN → student or parent ───────────
+    // ── BRANCH A: regNumber + PIN → student or parent ──────────────
     if (regNumber && pin) {
       const student = await Student.findOne({
         regNumber: regNumber.trim().toUpperCase(),
@@ -28,13 +22,12 @@ export const unifiedLogin = async (req, res) => {
         return res.status(401).json({ message: "Invalid registration number or PIN" });
       }
 
+      const inputPin = pin.trim().toUpperCase();
       const pinDoc = await Pin.findOne({
-        pin: pin.trim(),
-        $or: [
-          { usedBy: student._id },
-          { usedBy: null, isUsed: false },
-        ],
-      });
+        pin: inputPin,
+        usedBy: student._id,
+        isUsed: false,
+      }).sort({ createdAt: -1 });
 
       if (!pinDoc) {
         return res.status(401).json({ message: "Invalid registration number or PIN" });
@@ -48,10 +41,11 @@ export const unifiedLogin = async (req, res) => {
 
       if (!pinDoc.usedBy) {
         pinDoc.usedBy = student._id;
-        pinDoc.usedAt = new Date();
-        pinDoc.isUsed = true;
-        await pinDoc.save();
       }
+
+      pinDoc.usedAt = new Date();
+      pinDoc.isUsed = false;
+      await pinDoc.save();
 
       const portalRole = role === "parent" ? "parent" : "student";
 
@@ -83,12 +77,9 @@ export const unifiedLogin = async (req, res) => {
       });
     }
 
-    // ── BRANCH B: email + password → super admin or staff ───────
+    // ── BRANCH B: email + password → super admin or staff ──────────
     if (email && password) {
-
-      // 1. Check Admin collection FIRST (Super Admin)
-      //    Super admin has no role in User collection —
-      //    always check Admin before User to avoid confusion.
+      // 1. Check Admin collection (super admin)
       const admin = await Admin.findOne({ email: email.toLowerCase() });
       if (admin) {
         const isMatch = await bcrypt.compare(password, admin.password);
@@ -96,9 +87,8 @@ export const unifiedLogin = async (req, res) => {
           return res.status(401).json({ message: "Invalid email or password" });
         }
 
-        // Issue token with role: "super_admin" so frontend can distinguish
         const token = jwt.sign(
-          { id: admin._id, role: "super_admin" },
+          { id: admin._id, role: "admin" },
           process.env.JWT_SECRET,
           { expiresIn: "7d" }
         );
@@ -107,17 +97,17 @@ export const unifiedLogin = async (req, res) => {
           success: true,
           message: "Login successful",
           token,
-          role: "super_admin",
+          role: "admin",
           user: {
             _id:   admin._id,
             name:  admin.name,
             email: admin.email,
-            role:  "super_admin",
+            role:  "admin",
           },
         });
       }
 
-      // 2. Check User collection (teachers, accountant, inventory_manager, admin)
+      // 2. Check User collection (teachers + admin-role users)
       const user = await User.findOne({ email: email.toLowerCase() }).select("+password");
       if (user) {
         const isMatch = await bcrypt.compare(password, user.password);
@@ -129,8 +119,8 @@ export const unifiedLogin = async (req, res) => {
           return res.status(403).json({ message: "Account is deactivated. Contact admin." });
         }
 
-        // Block portal-only roles from logging into the staff portal
-        if (!STAFF_ROLES.includes(user.role)) {
+        const allowedRoles = ["teacher", "admin", "subject_teacher", "class_teacher"];
+        if (!allowedRoles.includes(user.role)) {
           return res.status(403).json({ message: "Access denied. Staff portal only." });
         }
 
@@ -154,11 +144,10 @@ export const unifiedLogin = async (req, res) => {
         });
       }
 
-      // Neither Admin nor User found
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    // Neither branch matched
+    // ── Neither branch matched ──────────────────────────────────────
     return res.status(400).json({
       message: "Please provide email & password, or registration number & PIN",
     });
@@ -168,9 +157,9 @@ export const unifiedLogin = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────
+// ==========================================
 // REGISTER USER (Admin only)
-// ─────────────────────────────────────────────────────────────
+// ==========================================
 export const registerUser = async (req, res) => {
   try {
     if (!req.admin) {
@@ -242,9 +231,9 @@ export const registerUser = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────
-// LEGACY ADMIN LOGIN (kept for backward compatibility)
-// ─────────────────────────────────────────────────────────────
+// ==========================================
+// ADMIN-SPECIFIC ENDPOINTS
+// ==========================================
 export const loginAdmin = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -264,7 +253,7 @@ export const loginAdmin = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: admin._id, role: "super_admin" },
+      { id: admin._id, role: "admin" },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
@@ -273,7 +262,7 @@ export const loginAdmin = async (req, res) => {
       success: true,
       message: "Login successful",
       token,
-      role: "super_admin",
+      role: "admin",
       admin: {
         _id:   admin._id,
         name:  admin.name,
