@@ -164,6 +164,50 @@ export const protectUser = async (req, res, next) => {
   }
 };
 
+// Super Admin, active staff, or the student/parent portal owner
+export const protectStudentOrPortal = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Not authorized, no token provided" });
+  }
+
+  const token = authHeader.split(" ")[1];
+  let decoded;
+  try {
+    decoded = jwt.verify(token, process.env.JWT_SECRET);
+  } catch (err) {
+    return res.status(401).json({
+      message: err.name === "TokenExpiredError"
+        ? "Token expired, please login again"
+        : "Not authorized, token failed",
+    });
+  }
+
+  // Portal tokens carry studentId rather than a staff user id.
+  if (decoded.studentId && ["student", "parent"].includes(decoded.role)) {
+    req.studentId = decoded.studentId;
+    req.portalRole = decoded.role;
+    return next();
+  }
+
+  try {
+    const { admin, user, isSuperAdmin } = await resolveToken(req);
+    if (admin && isSuperAdmin) {
+      req.admin = admin;
+      req.isSuperAdmin = true;
+      return next();
+    }
+    if (user?.isActive) {
+      req.user = user;
+      if (user.role === "admin") req.admin = user;
+      return next();
+    }
+    return res.status(403).json({ message: "Access denied." });
+  } catch (err) {
+    sendUnauth(res, err);
+  }
+};
+
 // ─────────────────────────────────────────────────────────────
 // protectTeacher — Super Admin OR any teaching role
 // ─────────────────────────────────────────────────────────────
