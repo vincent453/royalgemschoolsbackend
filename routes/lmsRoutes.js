@@ -1,14 +1,15 @@
 import express from "express";
 import multer  from "multer";
-import { protectAdminOrUser, protectTeacher } from "../middleware/authMiddleware.js";
+import { protectStudentOrPortal, protectTeacher } from "../middleware/authMiddleware.js";
 import { protectPortal }                      from "../middleware/portalMiddleware.js";
 import {
   createAssignment, getAssignments, getAssignment,
   updateAssignment, deleteAssignment,
   getSubmissions, submitAssignment,
   getMyAssignments, getMyAssignment,
-  gradeSubmission,
-  getResources, createResource, updateResource, deleteResource,
+  getMySubmissions, getMySubmission,
+  getSubmission, gradeSubmission,
+  getResources, getResource, createResource, updateResource, deleteResource,
 } from "../controllers/lmsController.js";
 
 const router = express.Router();
@@ -22,17 +23,34 @@ const upload = multer({
       "application/pdf",
       "application/msword",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.ms-powerpoint",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "image/jpeg", "image/png", "image/webp",
     ];
     if (allowed.includes(file.mimetype)) cb(null, true);
-    else cb(new Error("Allowed file types: PDF, DOC, DOCX, JPG, PNG, WEBP"));
+    else cb(new Error("Allowed file types: PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, JPG, PNG, WEBP"));
   },
 });
 
 // For resources: separate fields for image and attachment
 const resourceUpload = multer({
   storage: multer.memoryStorage(),
-  limits:  { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_, file, cb) => {
+    const allowed = [
+      "application/pdf", "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.ms-powerpoint",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "image/jpeg", "image/png", "image/webp",
+    ];
+    if (allowed.includes(file.mimetype)) cb(null, true);
+    else cb(new Error("Allowed file types: PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, JPG, PNG, WEBP"));
+  },
 });
 
 // ── Student portal — My Assignments ──────────────────────────
@@ -43,12 +61,12 @@ router.post("/assignments/:id/submit",
   upload.single("attachment"),
   submitAssignment
 );
+router.get("/my-submissions",       protectPortal, getMySubmissions);
+router.get("/my-submissions/:id",   protectPortal, getMySubmission);
 
 // ── Portal: Learning Resources (students can view) ────────────
-router.get("/resources", (req, res, next) => {
-  // Allow both portal and staff — skip auth check for GET
-  next();
-}, getResources);
+router.get("/resources", protectStudentOrPortal, getResources);
+router.get("/resources/:id", protectStudentOrPortal, getResource);
 
 // ── Teacher / Admin — Assignments ─────────────────────────────
 router.get( "/assignments",     protectTeacher, getAssignments);
@@ -59,6 +77,7 @@ router.delete("/assignments/:id", protectTeacher, deleteAssignment);
 
 // ── Teacher / Admin — Submissions & Grading ───────────────────
 router.get(  "/assignments/:id/submissions", protectTeacher, getSubmissions);
+router.get(  "/submissions/:id",             protectTeacher, getSubmission);
 router.patch("/submissions/:id/grade",       protectTeacher, gradeSubmission);
 
 // ── Teacher / Admin — Learning Resources ─────────────────────

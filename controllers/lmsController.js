@@ -23,6 +23,32 @@ const uploadToCloudinary = (buffer, folder, resourceType = "auto") => {
   });
 };
 
+const isAdmin = (req) => req.isSuperAdmin || req.user?.role === "admin";
+
+const authorizedClasses = (user) => new Set([
+  user?.assignedClass,
+  ...(Array.isArray(user?.assignedClasses) ? user.assignedClasses : []),
+].filter(Boolean).map(String));
+
+const authorizedSubjects = (user) => new Set(
+  String(user?.subject ?? "")
+    .split(",")
+    .map((subject) => subject.trim().toLowerCase())
+    .filter(Boolean)
+);
+
+const canManageScope = (req, classLevel, subject) => {
+  if (isAdmin(req)) return true;
+  const user = req.user;
+  if (!user || !authorizedClasses(user).has(String(classLevel))) return false;
+  if (user.role === "class_teacher") return true;
+  return authorizedSubjects(user).has(String(subject).trim().toLowerCase());
+};
+
+const canManageAssignment = (req, assignment) =>
+  canManageScope(req, assignment.classLevel, assignment.subject) &&
+  (isAdmin(req) || String(assignment.teacher?._id ?? assignment.teacher) === String(req.user?._id));
+
 // ─────────────────────────────────────────────────────────────
 // ASSIGNMENTS — Teacher CRUD
 // ─────────────────────────────────────────────────────────────
@@ -37,6 +63,9 @@ export const createAssignment = async (req, res) => {
     if (!subject?.trim())  return res.status(400).json({ message: "Subject is required" });
     if (!classLevel?.trim())return res.status(400).json({ message: "Class is required" });
     if (!dueDate)          return res.status(400).json({ message: "Due date is required" });
+    if (!canManageScope(req, classLevel, subject)) {
+      return res.status(403).json({ message: "You are not authorized for this class and subject." });
+    }
 
     let attachment = null;
     let attachmentName = null;
@@ -71,13 +100,19 @@ export const getAssignments = async (req, res) => {
     const { classLevel, subject, status } = req.query;
     const filter = {};
 
-    // Teachers only see their own assignments
-    if (!req.isSuperAdmin && req.user?.role !== "admin") {
+    if (!isAdmin(req)) {
       filter.teacher = req.user._id;
+      filter.classLevel = { $in: [...authorizedClasses(req.user)] };
     }
 
     if (classLevel) filter.classLevel = classLevel;
     if (subject)    filter.subject    = subject;
+    if (!isAdmin(req) && classLevel && !authorizedClasses(req.user).has(String(classLevel))) {
+      return res.status(403).json({ message: "You are not authorized to view that class." });
+    }
+    if (!isAdmin(req) && subject && !authorizedSubjects(req.user).has(String(subject).trim().toLowerCase())) {
+      return res.status(403).json({ message: "You are not authorized to view that subject." });
+    }
     if (status)     filter.status     = status;
 
     const assignments = await Assignment.find(filter)
@@ -96,6 +131,9 @@ export const getAssignment = async (req, res) => {
     const assignment = await Assignment.findById(req.params.id)
       .populate("teacher", "name email");
     if (!assignment) return res.status(404).json({ message: "Assignment not found" });
+    if (!canManageAssignment(req, assignment)) {
+      return res.status(403).json({ message: "You are not authorized to manage this assignment." });
+    }
     res.json({ success: true, assignment });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -108,15 +146,15 @@ export const updateAssignment = async (req, res) => {
     const assignment = await Assignment.findById(req.params.id);
     if (!assignment) return res.status(404).json({ message: "Assignment not found" });
 
-    // Only the teacher who created it or an admin can edit
-    if (!req.isSuperAdmin && req.user?.role !== "admin") {
-      if (assignment.teacher.toString() !== req.user._id.toString()) {
-        return res.status(403).json({ message: "You can only edit your own assignments." });
-      }
+    if (!canManageAssignment(req, assignment)) {
+      return res.status(403).json({ message: "You are not authorized to edit this assignment." });
     }
 
     const allowed = ["title","description","subject","classLevel","dueDate","maxScore","status"];
     allowed.forEach(k => { if (req.body[k] !== undefined) assignment[k] = req.body[k]; });
+    if (!canManageScope(req, assignment.classLevel, assignment.subject)) {
+      return res.status(403).json({ message: "You are not authorized for this class and subject." });
+    }
 
     if (req.file) {
       const result = await uploadToCloudinary(req.file.buffer, "lms/assignments");
@@ -137,10 +175,8 @@ export const deleteAssignment = async (req, res) => {
     const assignment = await Assignment.findById(req.params.id);
     if (!assignment) return res.status(404).json({ message: "Assignment not found" });
 
-    if (!req.isSuperAdmin && req.user?.role !== "admin") {
-      if (assignment.teacher.toString() !== req.user._id.toString()) {
-        return res.status(403).json({ message: "You can only delete your own assignments." });
-      }
+    if (!canManageAssignment(req, assignment)) {
+      return res.status(403).json({ message: "You are not authorized to delete this assignment." });
     }
 
     await assignment.deleteOne();
@@ -161,11 +197,8 @@ export const getSubmissions = async (req, res) => {
     const assignment = await Assignment.findById(req.params.id);
     if (!assignment) return res.status(404).json({ message: "Assignment not found" });
 
-    // Only the teacher who owns the assignment (or admin) can see submissions
-    if (!req.isSuperAdmin && req.user?.role !== "admin") {
-      if (assignment.teacher.toString() !== req.user._id.toString()) {
-        return res.status(403).json({ message: "Access denied." });
-      }
+    if (!canManageAssignment(req, assignment)) {
+      return res.status(403).json({ message: "Access denied." });
     }
 
     // Get all students in the class
@@ -196,6 +229,9 @@ export const submitAssignment = async (req, res) => {
   try {
     const { comment } = req.body;
     const studentId   = req.studentId; // set by protectPortal
+    if (req.portalRole !== "student") {
+      return res.status(403).json({ message: "Only students can submit assignments." });
+    }
 
     const assignment = await Assignment.findById(req.params.id);
     if (!assignment) return res.status(404).json({ message: "Assignment not found" });
@@ -298,20 +334,60 @@ export const getMyAssignment = async (req, res) => {
   }
 };
 
+export const getMySubmissions = async (req, res) => {
+  try {
+    const submissions = await Submission.find({ student: req.studentId })
+      .populate("assignment", "title subject classLevel dueDate maxScore")
+      .populate("gradedBy", "name")
+      .sort({ submittedAt: -1, createdAt: -1 });
+    res.json({ success: true, submissions });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export const getMySubmission = async (req, res) => {
+  try {
+    const submission = await Submission.findOne({
+      _id: req.params.id,
+      student: req.studentId,
+    })
+      .populate("assignment", "title subject classLevel dueDate maxScore")
+      .populate("gradedBy", "name");
+    if (!submission) return res.status(404).json({ message: "Submission not found" });
+    res.json({ success: true, submission });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export const getSubmission = async (req, res) => {
+  try {
+    const submission = await Submission.findById(req.params.id)
+      .populate("student", "firstName lastName regNumber classLevel profilePhoto")
+      .populate("assignment", "title subject classLevel dueDate maxScore teacher")
+      .populate("gradedBy", "name");
+    if (!submission) return res.status(404).json({ message: "Submission not found" });
+    if (!canManageAssignment(req, submission.assignment)) {
+      return res.status(403).json({ message: "Access denied." });
+    }
+    res.json({ success: true, submission });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 // PATCH /api/lms/submissions/:id/grade  (teacher only)
 export const gradeSubmission = async (req, res) => {
   try {
     const { score, feedback } = req.body;
     const submission = await Submission.findById(req.params.id)
-      .populate("assignment", "teacher maxScore");
+      .populate("assignment", "teacher subject classLevel maxScore");
 
     if (!submission) return res.status(404).json({ message: "Submission not found" });
 
-    // Only the teacher who owns the assignment can grade
-    if (!req.isSuperAdmin && req.user?.role !== "admin") {
-      if (submission.assignment.teacher.toString() !== req.user._id.toString()) {
-        return res.status(403).json({ message: "Access denied." });
-      }
+    if (!canManageAssignment(req, submission.assignment)) {
+      return res.status(403).json({ message: "Access denied." });
     }
 
     if (score !== undefined && (score < 0 || score > submission.assignment.maxScore)) {
@@ -324,7 +400,7 @@ export const gradeSubmission = async (req, res) => {
     submission.feedback = feedback?.trim() ?? submission.feedback;
     submission.status   = "graded";
     submission.gradedAt = new Date();
-    submission.gradedBy = req.user._id;
+    submission.gradedBy = req.user?._id ?? req.admin?._id;
     await submission.save();
 
     res.json({ success: true, submission });
@@ -343,11 +419,18 @@ export const getResources = async (req, res) => {
     const { classLevel, category, subject } = req.query;
     const filter = {};
 
+    let visibleClass = classLevel;
+    if (req.studentId) {
+      const student = await Student.findById(req.studentId).select("classLevel");
+      if (!student) return res.status(404).json({ message: "Student not found" });
+      visibleClass = student.classLevel;
+    }
+
     if (category) filter.category = category;
     if (subject)  filter.subject  = subject;
-    if (classLevel) {
+    if (visibleClass) {
       // Return resources for the specified class OR resources with no class restriction
-      filter.$or = [{ classLevel }, { classLevel: "" }];
+      filter.$or = [{ classLevel: visibleClass }, { classLevel: "" }];
     }
 
     const resources = await LearningResource.find(filter)
@@ -355,6 +438,24 @@ export const getResources = async (req, res) => {
       .sort({ createdAt: -1 });
 
     res.json({ success: true, resources, categories: CATEGORIES });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export const getResource = async (req, res) => {
+  try {
+    const resource = await LearningResource.findById(req.params.id).populate("createdBy", "name");
+    if (!resource) return res.status(404).json({ message: "Resource not found" });
+
+    if (req.studentId) {
+      const student = await Student.findById(req.studentId).select("classLevel");
+      if (!student || (resource.classLevel && resource.classLevel !== student.classLevel)) {
+        return res.status(403).json({ message: "This resource is not available for your class." });
+      }
+    }
+
+    res.json({ success: true, resource, categories: CATEGORIES });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -368,6 +469,9 @@ export const createResource = async (req, res) => {
 
     if (!title?.trim())    return res.status(400).json({ message: "Title is required" });
     if (!category)         return res.status(400).json({ message: "Category is required" });
+    if (classLevel && !canManageScope(req, classLevel, subject)) {
+      return res.status(403).json({ message: "You are not authorized for this class and subject." });
+    }
 
     let image = null, attachment = null, attachmentName = null;
 
@@ -406,16 +510,18 @@ export const updateResource = async (req, res) => {
     const resource = await LearningResource.findById(req.params.id);
     if (!resource) return res.status(404).json({ message: "Resource not found" });
 
-    // Only creator or admin
     const userId = req.user?._id ?? req.admin?._id;
-    if (!req.isSuperAdmin && req.user?.role !== "admin") {
-      if (resource.createdBy?.toString() !== userId?.toString()) {
-        return res.status(403).json({ message: "You can only edit your own resources." });
-      }
+    if (!isAdmin(req) && resource.createdBy?.toString() !== userId?.toString()) {
+      return res.status(403).json({ message: "You can only edit your own resources." });
     }
 
-    const allowed = ["title","description","category","subject","classLevel","url"];
-    allowed.forEach(k => { if (req.body[k] !== undefined) resource[k] = req.body[k]; });
+    const allowed = ["title", "description", "category", "subject", "classLevel", "url"];
+    allowed.forEach((key) => {
+      if (req.body[key] !== undefined) resource[key] = req.body[key];
+    });
+    if (resource.classLevel && !canManageScope(req, resource.classLevel, resource.subject)) {
+      return res.status(403).json({ message: "You are not authorized for this class and subject." });
+    }
 
     if (req.files?.image?.[0]) {
       const r = await uploadToCloudinary(req.files.image[0].buffer, "lms/resources/images", "image");
@@ -441,10 +547,8 @@ export const deleteResource = async (req, res) => {
     if (!resource) return res.status(404).json({ message: "Resource not found" });
 
     const userId = req.user?._id ?? req.admin?._id;
-    if (!req.isSuperAdmin && req.user?.role !== "admin") {
-      if (resource.createdBy?.toString() !== userId?.toString()) {
-        return res.status(403).json({ message: "You can only delete your own resources." });
-      }
+    if (!isAdmin(req) && resource.createdBy?.toString() !== userId?.toString()) {
+      return res.status(403).json({ message: "You can only delete your own resources." });
     }
 
     await resource.deleteOne();
@@ -453,3 +557,4 @@ export const deleteResource = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
