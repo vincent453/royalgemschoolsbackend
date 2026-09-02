@@ -98,6 +98,7 @@ export const unifiedLogin = async (req, res) => {
           message: "Login successful",
           token,
           role: "admin",
+          isSuperAdmin: true,
           user: {
             _id:   admin._id,
             name:  admin.name,

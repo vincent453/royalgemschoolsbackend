@@ -46,6 +46,8 @@ router.post("/login", async (req, res) => {
       success: true,
       message: "Login successful",
       token,
+      role: "admin",
+      isSuperAdmin: true,
       admin: {
         _id: admin._id,
         name: admin.name,
