@@ -2,6 +2,7 @@ import express from "express";
 import {
   uploadResult,
   getStudentResult,
+  getStudentCumulativeResults,
   renderResultCard,
   getAllResults,
   getPendingResults,
@@ -23,6 +24,8 @@ router.post("/", protectAdminOrUser, uploadResult);
 
 // ✅ Admin + Teacher can view result card (specific route BEFORE dynamic)
 router.get("/card/:studentId", protectAdminOrUser, renderResultCard);
+
+router.get("/cumulative/:studentId", protectAdminOrUser, getStudentCumulativeResults);
 
 // ✅ Admin + Teacher can view single student result
 router.get("/:studentId", protectAdminOrUser, getStudentResult);

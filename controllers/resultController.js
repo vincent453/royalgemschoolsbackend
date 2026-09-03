@@ -488,3 +488,34 @@ export const viewAllResults = async (req, res) => {
     });
   }
 };
+
+export const getStudentCumulativeResults = async (req, res) => {
+  try {
+    const results = await Result.find({ student: req.params.studentId })
+      .populate("student", "firstName lastName classLevel regNumber")
+      .sort({ session: 1, createdAt: 1 });
+
+    const termOrder = { "1st Term": 1, "2nd Term": 2, "3rd Term": 3 };
+    results.sort((a, b) => {
+      const sessionCompare = String(a.session).localeCompare(String(b.session));
+      return sessionCompare || ((termOrder[a.term] ?? 99) - (termOrder[b.term] ?? 99));
+    });
+
+    const labels = results.map((result) => `${result.session} · ${result.term}`);
+    const averages = results.map((result) => Number(result.average) || 0);
+    const subjectNames = [...new Set(results.flatMap((result) =>
+      (result.subjects || []).filter((subject) => !subject.isHeader).map((subject) => subject.name)
+    ))];
+    const subjects = subjectNames.map((name) => ({
+      name,
+      data: results.map((result) => {
+        const subject = (result.subjects || []).find((item) => item.name === name && !item.isHeader);
+        return subject ? Number(subject.total) || 0 : null;
+      }),
+    }));
+
+    res.json({ success: true, student: results[0]?.student ?? null, labels, averages, subjects });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
