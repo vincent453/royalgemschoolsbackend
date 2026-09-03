@@ -23,6 +23,9 @@ const uploadToCloudinary = (buffer, folder, resourceType = "auto") => {
   });
 };
 
+const documentResourceType = (mimetype) =>
+  mimetype?.startsWith("image/") ? "image" : "raw";
+
 const isAdmin = (req) => req.isSuperAdmin || req.user?.role === "admin";
 
 const authorizedClasses = (user) => new Set([
@@ -70,7 +73,11 @@ export const createAssignment = async (req, res) => {
     let attachment = null;
     let attachmentName = null;
     if (req.file) {
-      const result = await uploadToCloudinary(req.file.buffer, "lms/assignments");
+      const result = await uploadToCloudinary(
+        req.file.buffer,
+        "lms/assignments",
+        documentResourceType(req.file.mimetype)
+      );
       attachment = result.secure_url;
       attachmentName = req.file.originalname;
     }
@@ -157,7 +164,11 @@ export const updateAssignment = async (req, res) => {
     }
 
     if (req.file) {
-      const result = await uploadToCloudinary(req.file.buffer, "lms/assignments");
+      const result = await uploadToCloudinary(
+        req.file.buffer,
+        "lms/assignments",
+        documentResourceType(req.file.mimetype)
+      );
       assignment.attachment = result.secure_url;
       assignment.attachmentName = req.file.originalname;
     }
@@ -249,7 +260,11 @@ export const submitAssignment = async (req, res) => {
     let attachment = null;
     let attachmentName = null;
     if (req.file) {
-      const result = await uploadToCloudinary(req.file.buffer, "lms/submissions");
+      const result = await uploadToCloudinary(
+        req.file.buffer,
+        "lms/submissions",
+        documentResourceType(req.file.mimetype)
+      );
       attachment = result.secure_url;
       attachmentName = req.file.originalname;
     }
@@ -480,7 +495,11 @@ export const createResource = async (req, res) => {
       image = r.secure_url;
     }
     if (req.files?.attachment?.[0]) {
-      const r = await uploadToCloudinary(req.files.attachment[0].buffer, "lms/resources/files");
+      const r = await uploadToCloudinary(
+        req.files.attachment[0].buffer,
+        "lms/resources/files",
+        documentResourceType(req.files.attachment[0].mimetype)
+      );
       attachment = r.secure_url;
       attachmentName = req.files.attachment[0].originalname;
     }
@@ -528,7 +547,11 @@ export const updateResource = async (req, res) => {
       resource.image = r.secure_url;
     }
     if (req.files?.attachment?.[0]) {
-      const r = await uploadToCloudinary(req.files.attachment[0].buffer, "lms/resources/files");
+      const r = await uploadToCloudinary(
+        req.files.attachment[0].buffer,
+        "lms/resources/files",
+        documentResourceType(req.files.attachment[0].mimetype)
+      );
       resource.attachment = r.secure_url;
       resource.attachmentName = req.files.attachment[0].originalname;
     }
