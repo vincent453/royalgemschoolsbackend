@@ -9,7 +9,7 @@ import {
   initializePaystackPayment,
 } from "../controllers/feeController.js";
 import {
-  protectStaffAdmin,
+  protectFinance,
   protectStudentOrPortal,
 } from "../middleware/authMiddleware.js";
 import { protectPortal } from "../middleware/portalMiddleware.js";
@@ -28,12 +28,12 @@ router.post("/paystack/initialize", protectPortal, initializePaystackPayment);
 router.get("/me/all", protectPortal, getMyFeeStatements);
 
 // ── ADMIN ─────────────────────────────────────────────────────
-router.post("/", protectStaffAdmin, createFeeStatement);
-router.get("/",  protectStaffAdmin, getFeeStatements);
+router.post("/", protectFinance, createFeeStatement);
+router.get("/",  protectFinance, getFeeStatements);
 
 // ── SINGLE RECORD — keep :id routes LAST ─────────────────────
 router.get("/:id",    protectStudentOrPortal, getFeeStatementById);
-router.put("/:id",    protectStaffAdmin,       updateFeeStatement);
-router.delete("/:id", protectStaffAdmin,       deleteFeeStatement);
+router.put("/:id",    protectFinance,       updateFeeStatement);
+router.delete("/:id", protectFinance,       deleteFeeStatement);
 
 export default router;

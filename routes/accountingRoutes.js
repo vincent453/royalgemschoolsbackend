@@ -4,12 +4,12 @@ import {
   addExpense, editExpense, deleteExpense, listExpenses,
   dashboardSummary, getLedger,
 } from "../controllers/accountingController.js";
-import { protect } from "../middleware/authMiddleware.js";
+import { protectFinance } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
 // All accounting routes require admin auth
-router.use(protect);
+router.use(protectFinance);
 
 // ── Income ────────────────────────────────────────────────────
 router.get   ("/incomes",     listIncome);

@@ -9,7 +9,7 @@ import {
   downloadReceiptPdf,
   recordManualPayment,
 } from "../controllers/receiptController.js";
-import { protectStaffAdmin } from "../middleware/authMiddleware.js";
+import { protectFinance } from "../middleware/authMiddleware.js";
 import { protectPortal } from "../middleware/portalMiddleware.js";
 
 const router = express.Router();
@@ -18,11 +18,11 @@ const router = express.Router();
 router.get("/me", protectPortal, getMyReceipts);
 
 // ── Admin only ────────────────────────────────────────────────
-router.get("/stats",  protectStaffAdmin, getReceiptStats);
-router.get("/search", protectStaffAdmin, searchReceipts);
-router.get("/student/:studentId", protectStaffAdmin, getReceiptsByStudent);
-router.post("/manual", protectStaffAdmin, recordManualPayment);
-router.get("/", protectStaffAdmin, getAllReceipts);
+router.get("/stats",  protectFinance, getReceiptStats);
+router.get("/search", protectFinance, searchReceipts);
+router.get("/student/:studentId", protectFinance, getReceiptsByStudent);
+router.post("/manual", protectFinance, recordManualPayment);
+router.get("/", protectFinance, getAllReceipts);
 
 // ── Receipt by Fee Statement ID (for portal users viewing receipts) ─
 router.get("/byFeeStatement/:feeStatementId", protectPortal, async (req, res) => {
@@ -68,7 +68,7 @@ const protectAdminOrPortal = async (req, res, next) => {
   } catch {
     // fall through to staff admin check
   }
-  return protectStaffAdmin(req, res, next);
+  return protectFinance(req, res, next);
 };
 
 router.get("/:id",          protectAdminOrPortal, getReceiptById);

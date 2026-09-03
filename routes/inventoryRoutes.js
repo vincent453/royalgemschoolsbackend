@@ -1,5 +1,5 @@
 import express from "express";
-import { protect, protectStaffAdmin, protectAdminOrUser } from "../middleware/authMiddleware.js";
+import { protectInventory } from "../middleware/authMiddleware.js";
 import {
   createInventoryItem, getAllInventory, getInventoryById,
   updateInventoryItem, deleteInventoryItem,
@@ -12,7 +12,7 @@ import { validateInventory } from "../middleware/inventoryValidator.js";
 const router = express.Router();
 
 // All routes require at least staff auth
-router.use(protectAdminOrUser);
+router.use(protectInventory);
 
 // ── Reports (specific routes BEFORE /:id) ────────────────────
 router.get("/report",       getInventoryReport);
@@ -32,12 +32,11 @@ router.post("/purchase", recordPurchase);
 router.get("/",       getAllInventory);
 router.post(
   "/",
-  protectStaffAdmin,
   validateInventory,
   createInventoryItem
 );
 router.get("/:id",    getInventoryById);
-router.put("/:id",    protectStaffAdmin, updateInventoryItem);
-router.delete("/:id", protect, deleteInventoryItem);
+router.put("/:id",    protectInventory, updateInventoryItem);
+router.delete("/:id", protectInventory, deleteInventoryItem);
 
 export default router;
