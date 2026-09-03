@@ -3,8 +3,9 @@ import mongoose from "mongoose";
 const subjectSchema = new mongoose.Schema({
   name:  { type: String, required: true },
 
-  // ── Per-term scores (cwk removed) ───────────────────────
+  // ── Per-term scores ────────────────────────────────────
   hwk:   { type: Number, default: 0 },  // Home Work   0–10
+  cf:    { type: Number, default: 0 },  // Classwork    0–10
   ca1:   { type: Number, default: 0 },  // CA1         0–10
   ca2:   { type: Number, default: 0 },  // CA2         0–10
   exam:  { type: Number, default: 0 },  // Exam        0–60
