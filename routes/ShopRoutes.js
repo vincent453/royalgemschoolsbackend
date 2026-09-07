@@ -1,6 +1,6 @@
 import express from "express";
 import multer  from "multer";
-import { protect, protectStaffAdmin } from "../middleware/authMiddleware.js";
+import { protect, protectStaffAdmin, protectInventory } from "../middleware/authMiddleware.js";
 import { protectPortal }              from "../middleware/portalMiddleware.js";
 import {
   getShopDashboard, getCategories, createCategory, updateCategory, deleteCategory,
@@ -25,8 +25,6 @@ const upload = multer({
 
 // NOTE: the Paystack webhook for shop payments has moved to the
 // unified endpoint at /api/webhooks/paystack (see routes/paystackWebhookRoutes.js).
-// Paystack only supports one webhook URL per mode on the whole account,
-// so shop and fee payments are now both handled there.
 
 // ── Public shop (parent portal — no auth needed for browsing) ─
 router.get("/public/products", getPublicProducts);
@@ -37,27 +35,30 @@ router.post("/orders",                    protectPortal, placeOrder);
 router.post("/orders/:id/pay",            protectPortal, initializeShopPayment);
 router.get( "/my-orders",                 protectPortal, getMyOrders);
 
-// ── Admin dashboard & reports ─────────────────────────────────
+// ── Admin-only: revenue/customer visibility ────────────────────
+// Kept on protectStaffAdmin (super_admin + admin only) — inventory
+// managers should not see revenue figures or customer spending.
 router.get("/dashboard", protectStaffAdmin, getShopDashboard);
 router.get("/report",    protectStaffAdmin, getSalesReport);
 router.get("/customers", protectStaffAdmin, getCustomers);
 
-// ── Categories ────────────────────────────────────────────────
-router.get(   "/categories",     protectStaffAdmin, getCategories);
-router.post(  "/categories",     protectStaffAdmin, upload.single("image"), createCategory);
-router.put(   "/categories/:id", protectStaffAdmin, upload.single("image"), updateCategory);
-router.delete("/categories/:id", protect,           deleteCategory);
+// ── Categories — day-to-day shop management ────────────────────
+// protectInventory allows super_admin + admin + inventory_manager
+router.get(   "/categories",     protectInventory, getCategories);
+router.post(  "/categories",     protectInventory, upload.single("image"), createCategory);
+router.put(   "/categories/:id", protectInventory, upload.single("image"), updateCategory);
+router.delete("/categories/:id", protect,           deleteCategory); // destructive — super admin only
 
-// ── Products ──────────────────────────────────────────────────
-router.get(   "/products",     protectStaffAdmin, getProducts);
-router.post(  "/products",     protectStaffAdmin, upload.array("images", 5), createProduct);
-router.get(   "/products/:id", protectStaffAdmin, getProduct);
-router.put(   "/products/:id", protectStaffAdmin, upload.array("images", 5), updateProduct);
-router.delete("/products/:id", protect,           deleteProduct);
+// ── Products — day-to-day shop management ──────────────────────
+router.get(   "/products",     protectInventory, getProducts);
+router.post(  "/products",     protectInventory, upload.array("images", 5), createProduct);
+router.get(   "/products/:id", protectInventory, getProduct);
+router.put(   "/products/:id", protectInventory, upload.array("images", 5), updateProduct);
+router.delete("/products/:id", protect,           deleteProduct); // destructive — super admin only
 
-// ── Orders ────────────────────────────────────────────────────
-router.get(   "/orders",             protectStaffAdmin, getOrders);
-router.get(   "/orders/:id",         protectStaffAdmin, getOrder);
-router.patch( "/orders/:id/status",  protectStaffAdmin, updateOrderStatus);
+// ── Orders — fulfillment ─────────────────────────────────────────
+router.get(   "/orders",             protectInventory, getOrders);
+router.get(   "/orders/:id",         protectInventory, getOrder);
+router.patch( "/orders/:id/status",  protectInventory, updateOrderStatus);
 
 export default router;
