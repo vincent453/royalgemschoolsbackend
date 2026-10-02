@@ -325,8 +325,7 @@ export const updateUser = async (req, res) => {
 
     // Update password if provided
     if (password && password.trim() !== "") {
-      const salt = await bcrypt.genSalt(10);
-      user.password = await bcrypt.hash(password.trim(), salt);
+      user.password = password.trim();
     }
 
     const updatedUser = await user.save();
