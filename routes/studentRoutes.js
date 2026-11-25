@@ -46,7 +46,8 @@ router.get(
 // Super Admin + Admin
 router.post(
   "/",
-  protectStaffAdmin,
+  protectTeacher,
+  restrictTo("admin", "teacher", "class_teacher"),
   upload.single("profilePhoto"),
   addStudent
 );

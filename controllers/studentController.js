@@ -43,6 +43,13 @@ export const addStudent = async (req, res) => {
       return res.status(400).json({ message: "All required fields must be provided" });
     }
 
+    if (req.user && ["teacher", "class_teacher"].includes(req.user.role)) {
+      const assignedClasses = getAssignedClasses(req.user);
+      if (!assignedClasses.has(classLevel)) {
+        return res.status(403).json({ message: "You can only add students to your assigned classes." });
+      }
+    }
+
     const existing = await Student.findOne({ regNumber });
     if (existing) {
       return res.status(400).json({ message: "Reg Number already exists" });
