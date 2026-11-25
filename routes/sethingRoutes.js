@@ -3,8 +3,10 @@ import multer  from "multer";
 import { protect } from "../middleware/authMiddleware.js";
 import {
   getSchoolInfo,
+  getReportCardBranding,
   updateSchoolInfo,
   updateSchoolLogo,
+  updateSchoolStampSignature,
   getAccount,
   updateAccount,
   changePassword,
@@ -20,6 +22,8 @@ const upload = multer({
   limits: { fileSize: 2 * 1024 * 1024 }, // 2 MB
 });
 
+router.get("/school/report-card", getReportCardBranding);
+
 // All settings routes require admin auth
 router.use(protect);
 
@@ -27,6 +31,11 @@ router.use(protect);
 router.get   ("/school",      getSchoolInfo);
 router.patch ("/school",      updateSchoolInfo);
 router.post  ("/school/logo", upload.single("logo"), updateSchoolLogo);
+router.post(
+  "/school/stamp-signature",
+  upload.single("stampSignature"),
+  updateSchoolStampSignature
+);
 router.post("/account/avatar", protect, upload.single("avatar"), updateAvatar);
 
 // ── Account ───────────────────────────────────────────────────

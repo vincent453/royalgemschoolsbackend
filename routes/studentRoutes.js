@@ -11,6 +11,7 @@ import {
 
 import {
   protectAdminOrUser,
+  protectTeacher,
   protectStaffAdmin,
   protectStudentOrPortal,
   restrictTo,
@@ -52,7 +53,8 @@ router.post(
 
 router.put(
   "/:id",
-  protectStaffAdmin,
+  protectTeacher,
+  restrictTo("admin", "teacher", "class_teacher"),
   upload.single("profilePhoto"),
   updateStudent
 );

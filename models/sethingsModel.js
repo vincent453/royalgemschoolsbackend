@@ -9,6 +9,7 @@ const settingsSchema = new mongoose.Schema({
   address2:    { type: String },
   website:     { type: String },
   logo:        { type: String, default: "" },
+  stampSignature: { type: String, default: "" },
   session:     { type: String, default: "2024/2025" },
   currentTerm: { type: String, default: "1st Term" },
   notifications: {

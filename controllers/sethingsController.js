@@ -14,7 +14,7 @@ import bcrypt from "bcryptjs";
 // ─────────────────────────────────────────────────────────────
 // Helper — same Cloudinary upload pattern you use in studentController
 // ─────────────────────────────────────────────────────────────
-const uploadToCloudinary = (buffer) => {
+const uploadToCloudinary = (buffer, folder = "school_logos") => {
   cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key:    process.env.CLOUDINARY_API_KEY,
@@ -23,7 +23,7 @@ const uploadToCloudinary = (buffer) => {
 
   return new Promise((resolve, reject) => {
     cloudinary.uploader
-      .upload_stream({ folder: "school_logos" }, (error, result) => {
+      .upload_stream({ folder }, (error, result) => {
         if (error) reject(error);
         else resolve(result);
       })
@@ -46,6 +46,15 @@ export const getSchoolInfo = async (req, res) => {
   try {
     const settings = await getOrCreate();
     res.json(settings);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export const getReportCardBranding = async (req, res) => {
+  try {
+    const settings = await getOrCreate();
+    res.json({ stampSignature: settings.stampSignature });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -121,6 +130,26 @@ export const updateSchoolLogo = async (req, res) => {
     );
 
     res.json({ logoUrl: settings.logo });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export const updateSchoolStampSignature = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    const result = await uploadToCloudinary(req.file.buffer, "school_report_cards");
+
+    const settings = await Settings.findOneAndUpdate(
+      {},
+      { $set: { stampSignature: result.secure_url } },
+      { upsert: true, new: true }
+    );
+
+    res.json({ stampSignatureUrl: settings.stampSignature });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

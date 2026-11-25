@@ -18,6 +18,17 @@ const uploadToCloudinary = (buffer) => {
   });
 };
 
+const getAssignedClasses = (user) => {
+  const classes = new Set();
+  if (user?.assignedClass) classes.add(user.assignedClass);
+  if (Array.isArray(user?.assignedClasses)) {
+    user.assignedClasses.forEach((classLevel) => {
+      if (classLevel) classes.add(classLevel);
+    });
+  }
+  return classes;
+};
+
 // @desc Add new student
 // @route POST /api/students
 export const addStudent = async (req, res) => {
@@ -64,15 +75,30 @@ export const updateStudent = async (req, res) => {
     const { id } = req.params;
     let updateData = { ...req.body };
 
+    const student = await Student.findById(id);
+    if (!student) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    if (req.user && ["teacher", "class_teacher"].includes(req.user.role)) {
+      const assignedClasses = getAssignedClasses(req.user);
+      if (
+        !assignedClasses.has(student.classLevel) ||
+        (
+          Object.prototype.hasOwnProperty.call(updateData, "classLevel") &&
+          updateData.classLevel !== student.classLevel
+        )
+      ) {
+        return res.status(403).json({ message: "You can only edit students in your assigned classes." });
+      }
+    }
+
     if (req.file) {
       const result = await uploadToCloudinary(req.file.buffer);
       updateData.profilePhoto = result.secure_url;
     }
 
     const updated = await Student.findByIdAndUpdate(id, updateData, { new: true });
-    if (!updated) {
-      return res.status(404).json({ message: "Student not found" });
-    }
 
     res.status(200).json(updated);
   } catch (error) {
@@ -90,13 +116,7 @@ export const getStudents = async (req, res) => {
     let filter = {};
 
     if (req.user && ["teacher", "subject_teacher", "class_teacher"].includes(req.user.role)) {
-      const assignedClasses = new Set();
-      if (req.user.assignedClass) assignedClasses.add(req.user.assignedClass);
-      if (Array.isArray(req.user.assignedClasses)) {
-        req.user.assignedClasses.forEach((cls) => {
-          if (cls) assignedClasses.add(cls);
-        });
-      }
+      const assignedClasses = getAssignedClasses(req.user);
 
       if (assignedClasses.size === 0) {
         return res.status(200).json([]);
@@ -134,6 +154,13 @@ export const getStudentById = async (req, res) => {
     const student = await Student.findById(id);
     if (!student) {
       return res.status(404).json({ message: "Student not found" });
+    }
+
+    if (req.user && ["teacher", "subject_teacher", "class_teacher"].includes(req.user.role)) {
+      const assignedClasses = getAssignedClasses(req.user);
+      if (!assignedClasses.has(student.classLevel)) {
+        return res.status(403).json({ message: "You are not authorized to view this student's profile." });
+      }
     }
 
     res.status(200).json(student);
